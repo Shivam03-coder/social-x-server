@@ -1,3 +1,9 @@
 import authRouter from "./clerk-webhook.routes";
 
-export default [{ path: "auth", router: authRouter }];
+export default [
+  { path: "clerk", router: authRouter },
+  {
+    path: "organization",
+    router: "/organization",
+  },
+];

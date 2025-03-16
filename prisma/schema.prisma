@@ -7,34 +7,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-//
-// MODELS
-//
-
 model User {
-  id        String     @id @default(cuid())
-  email     String     @unique
-  firstName String?
-  lastName  String?
-  imageUrl  String?
-  role      GlobalRole @default(ADMIN)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-
-  organizationMemberships OrganizationMember[]
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  firstName           String?
+  lastName            String?
+  imageUrl            String?
+  role                GlobalRole           @default(ADMIN)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  organizationMembers OrganizationMember[]
 
   @@map("Users")
 }
 
 model Organization {
-  id        String   @id @default(cuid())
+  id        String               @id @default(cuid())
   name      String
-  slug      String   @unique
+  slug      String               @unique
+  adminId   String               @unique
   imageUrl  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  members OrganizationMember[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  members   OrganizationMember[]
 
   @@map("Organizations")
 }
@@ -57,24 +52,18 @@ model OrganizationMember {
   @@map("OrganizationMembers")
 }
 
-//
-// ENUMS
-//
-
 enum GlobalRole {
   ADMIN
   USER
 }
 
 enum OrgMemberRole {
-  ADMIN // Organization owner/admin
-  CLIENT // Organization client
-  MEMBER // Organization member
+  ADMIN
+  CLIENT
+  MEMBER
 }
 
 enum MembershipStatus {
-  PENDING // Invited but not yet accepted
-  ACCEPTED // Invitation accepted
-  DECLINED // Invitation declined (optional)
-  REMOVED // Membership removed (optional)
+  PENDING
+  ACCEPTED
 }

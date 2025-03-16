@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { appEnvConfigs } from "./configs";
-import { ApiResponse } from "./helpers/server-functions";
+import { ApiResponse } from "./utils/server-functions";
 import App from "./app";
 
 const appInstance = new App();

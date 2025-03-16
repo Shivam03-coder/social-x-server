@@ -4,7 +4,7 @@ import {
   ApiError,
   ApiResponse,
   AsyncHandler,
-} from "@src/helpers/server-functions";
+} from "@src/utils/server-functions";
 import { Request, Response } from "express";
 import { Webhook } from "svix";
 

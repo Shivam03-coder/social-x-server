@@ -7,7 +7,7 @@ import cookieParser from "cookie-parser";
 import { Server } from "http";
 import { clerkMiddleware } from "@clerk/express";
 import { appEnvConfigs } from "./configs";
-import { ApiError } from "./helpers/server-functions";
+import { ApiError } from "./utils/server-functions";
 import routes from "./routes/index.routes";
 import { inngest, functions } from "./libs/inngest";
 
