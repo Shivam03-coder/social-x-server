@@ -5,7 +5,7 @@ import { Router } from "express";
 const authRouter = Router();
 
 authRouter
-  .route("/webhooks/user-sync")
+  .route("/webhook")
   .post(
     bodyParser.raw({ type: "application/json" }),
     ClerkWebhookController.UserSync

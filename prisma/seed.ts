@@ -4,42 +4,32 @@ import { PrismaClient } from "@prisma/client";
 const db = new PrismaClient();
 
 async function main() {
-  const userId = "user_2u4Yn2zzFio5OnX0lv3Gn4mLK2W";
-  const accountId = "08c4a129-3bfe-4715-b9e8-0a6435043aa6";
+  const adminId = "user_2uONdeX6kqOalEBlqnalyzDCsCd";
 
-  const transactions = Array.from({ length: 5 }).map(() => ({
-    userId,
-    accountId,
-    type: faker.helpers.arrayElement(["INCOME", "EXPENSE", "TRANSFER"]),
-    amount: parseFloat(faker.finance.amount({ min: 125.32, max: 1290.23 })),
-    description: faker.lorem.sentence(),
-    date: faker.date.between({
-      from: "2024-01-01T00:00:00.000Z",
-      to: "2025-01-01T00:00:00.000Z",
-    }),
-    category: faker.helpers.arrayElement([
-      "Food",
-      "Transport",
-      "Utilities",
-      "Entertainment",
-      "Health",
-    ]),
-    receiptUrl: faker.internet.url(),
-    isRecurring: faker.datatype.boolean(),
-    recurringInterval: faker.helpers.arrayElement([
-      null,
-      "DAILY",
-      "WEEKLY",
-      "MONTHLY",
-    ]),
-    nextRecurringDate: null,
-    lastProcessed: null,
-    status: faker.helpers.arrayElement(["PENDING", "COMPLETED", "REJECTED"]),
-  }));
+  // Create 12 organizations
+  const organizations = Array.from({ length: 12 }).map((_, index) => {
+    const name = faker.company.name();
+    const slug = faker.helpers.slugify(name.toLowerCase());
+    const imageUrl = faker.image.urlLoremFlickr({
+      category: "business",
+      width: 200,
+      height: 200,
+    });
 
-  await db.transaction.createMany({
-    data: transactions,
+    return {
+      adminId: adminId,
+      name: name,
+      slug: slug,
+      imageUrl: imageUrl,
+    };
   });
+
+  // Insert all organizations
+  await db.organization.createMany({
+    data: organizations,
+  });
+
+  console.log("✅ Seeded 12 organizations");
 }
 
 main()
@@ -47,7 +37,7 @@ main()
     await db.$disconnect();
   })
   .catch(async (e) => {
-    console.error(e);
+    console.error("❌ Seed error:", e);
     await db.$disconnect();
     process.exit(1);
   });
