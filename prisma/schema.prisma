@@ -17,7 +17,7 @@ model User {
   firstName String?
   lastName  String?
   imageUrl  String?
-  role      GlobalRole @default(USER)
+  role      GlobalRole @default(ADMIN)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -62,8 +62,8 @@ model OrganizationMember {
 //
 
 enum GlobalRole {
-  ADMIN // App admin
-  USER // Regular user
+  ADMIN
+  USER
 }
 
 enum OrgMemberRole {

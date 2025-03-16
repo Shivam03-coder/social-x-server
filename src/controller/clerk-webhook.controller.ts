@@ -54,9 +54,9 @@ export class ClerkWebhookController {
         `RECEIVED WEBHOOK WITH ID ${id} AND EVENT TYPE OF ${eventType}`
       );
 
-      // Extract role from Clerk's `public_metadata` or fallback to "CLIENT"
       const roleFromMetadata = public_metadata?.role;
-      const role = roleFromMetadata || "CLIENT";
+      const role = roleFromMetadata;
+      console.log("🚀 ~ ClerkWebhookController ~ role:", role)
 
       if (eventType === "user.created" || eventType === "user.updated") {
         await db.user.upsert({
@@ -66,7 +66,7 @@ export class ClerkWebhookController {
             firstName: first_name,
             lastName: last_name,
             imageUrl: image_url,
-            role, // Save role on update
+            role, 
           },
           create: {
             id,
@@ -74,7 +74,7 @@ export class ClerkWebhookController {
             firstName: first_name,
             lastName: last_name,
             imageUrl: image_url,
-            role, // Save role on create
+            role, 
           },
         });
       }
