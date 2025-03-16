@@ -4,7 +4,7 @@ import CloudinaryService from "@src/services/cloudinary";
 import GetImageUrlFromCloudinary from "@src/services/cloudinary";
 import MailService from "@src/services/nodemailer";
 import { DecryptedRequest } from "@src/types/types";
-import { GlobalRole } from "@prisma/client";
+import { OrgMemberRole } from "@prisma/client";
 import {
   ApiError,
   AsyncHandler,
@@ -121,8 +121,8 @@ export class OrganizationController {
         throw new ApiError(400, "Role must be MEMBER or CLIENT.");
       }
 
-      const memberRole = normalizedRole as "MEMBER" | "CLIENT";
-      const userRole = normalizedRole as GlobalRole;
+      const memberRole = normalizedRole as "MEMBER" | "CLIENT" | "ADMIN";
+      const userRole = normalizedRole as OrgMemberRole;
 
       const org = await db.organization.findFirst({
         where: { id: orgId },
@@ -137,9 +137,11 @@ export class OrganizationController {
         select: { id: true, role: true },
       });
 
+      console.log(existingUser);
+
       const result = await db.$transaction(async (tx) => {
         let userId: string;
-        let savedUserRole: GlobalRole;
+        let savedUserRole: OrgMemberRole;
 
         if (!existingUser) {
           const newUser = await tx.user.create({
@@ -154,7 +156,6 @@ export class OrganizationController {
               role: true,
             },
           });
-
           userId = newUser.id;
           savedUserRole = newUser.role;
         } else {
@@ -186,6 +187,9 @@ export class OrganizationController {
 
         return { id: userId, role: savedUserRole };
       });
+
+      GlobalUtils.setCookie(res, "UserId", result.id);
+      GlobalUtils.setCookie(res, "UserRole", result.role);
 
       res
         .status(201)

@@ -54,7 +54,8 @@ model OrganizationMember {
 
 enum GlobalRole {
   ADMIN
-  USER
+  CLIENT
+  MEMBER
 }
 
 enum OrgMemberRole {
