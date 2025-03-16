@@ -17,6 +17,11 @@ organizationRouter
 
 organizationRouter
   .route("/invitations/:orgId")
-  .post(requireAuth(), OrganizationController.SendInvitations);
+  .post(requireAuth(), OrganizationController.SendOrgInvitations);
+
+// NOT A PROTECTED ROUTE
+organizationRouter
+  .route("/invitations/accept/:orgId/:role/:email")
+  .post(OrganizationController.AcceptOrgInvitation);
 
 export default organizationRouter;

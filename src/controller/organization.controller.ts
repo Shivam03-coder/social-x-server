@@ -74,7 +74,8 @@ export class OrganizationController {
       res.status(200).json(new ApiResponse(200, "Organizations fetched", orgs));
     }
   );
-  public static SendInvitations = AsyncHandler(
+
+  public static SendOrgInvitations = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const user = await GlobalUtils.checkUserId(req);
       const { emails, role } = req.body;
@@ -97,15 +98,59 @@ export class OrganizationController {
 
       try {
         await MailService.sendEmail(emails, orgId, role);
-        res.json(
-          new ApiResponse(
-            200,
-            `Invitations sent to ${emails.length} ${role}s successfully`
-          )
-        );
+        res.json(new ApiResponse(200, `Invitations sent  successfully`));
       } catch (error) {
         throw new ApiError(500, "Failed to send invitations");
       }
+    }
+  );
+
+  public static AcceptOrgInvitation = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { orgId, role, email } = req.params;
+      const { firstName, lastName } = req.body;
+
+      if (!firstName || !lastName) {
+        throw new ApiError(400, "Missing required fields");
+      }
+
+      if (!role || !["MEMBER", "CLIENT"].includes(role.toUpperCase())) {
+        throw new ApiError(400, "Role must be MEMBER or CLIENT.");
+      }
+
+      const org = await db.organization.findFirst({
+        where: { id: orgId },
+      });
+
+      if (!org) {
+        throw new ApiError(404, "Organization not found");
+      }
+
+      const result = await db.$transaction(async (tx) => {
+        const newMember = await tx.user.create({
+          data: {
+            firstName,
+            lastName,
+            email,
+          },
+        });
+
+        const memberRole = role.toUpperCase() as "MEMBER" | "CLIENT";
+
+        await tx.organizationMember.create({
+          data: {
+            organizationId: orgId,
+            userId: newMember.id,
+            role: memberRole,
+          },
+        });
+
+        return newMember;
+      });
+
+      res
+        .status(201)
+        .json(new ApiResponse(201, "User joined the organization", result));
     }
   );
 }
