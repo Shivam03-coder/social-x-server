@@ -44,8 +44,7 @@ export class ClerkWebhookController {
         throw new ApiError(401, "INVALID SIGNATURE");
       }
 
-      const { id, first_name, last_name, image_url, public_metadata } =
-        evt.data;
+      const { id, first_name, last_name, image_url } = evt.data;
 
       const email = evt.data.email_addresses[0]?.email_address;
       const eventType = evt.type;
@@ -53,10 +52,6 @@ export class ClerkWebhookController {
       console.log(
         `RECEIVED WEBHOOK WITH ID ${id} AND EVENT TYPE OF ${eventType}`
       );
-
-      const roleFromMetadata = public_metadata?.role;
-      const role = roleFromMetadata;
-      console.log("🚀 ~ ClerkWebhookController ~ role:", role)
 
       if (eventType === "user.created" || eventType === "user.updated") {
         await db.user.upsert({
@@ -66,7 +61,6 @@ export class ClerkWebhookController {
             firstName: first_name,
             lastName: last_name,
             imageUrl: image_url,
-            role, 
           },
           create: {
             id,
@@ -74,66 +68,13 @@ export class ClerkWebhookController {
             firstName: first_name,
             lastName: last_name,
             imageUrl: image_url,
-            role, 
-          },
-        });
-      }
-
-      if (
-        eventType === "organization.created" ||
-        eventType === "organization.updated"
-      ) {
-        const { id, name, slug, logo_url, created_by } = evt.data;
-        await db.organization.upsert({
-          where: { id },
-          update: {
-            name: evt.data.name,
-          },
-          create: {
-            id: id,
-            name: name,
-            slug: slug,
-            imageUrl: logo_url,
-            members: {
-              create: {
-                role: "ADMIN",
-                userId: created_by,
-              },
-            },
-          },
-        });
-        console.log(`Organization ${id} created`);
-      }
-      if (
-        eventType === "organizationMembership.created" ||
-        eventType === "organizationMembership.updated"
-      ) {
-        const { id, organization, public_user_data, role, status } = evt.data;
-
-        let membershipStatus =
-          status === "active" ? "ACCEPTED" : status.toUpperCase();
-
-        await db.organizationMember.upsert({
-          where: { id },
-          update: {
-            role,
-            status: membershipStatus,
-          },
-          create: {
-            id,
-            organizationId: organization.id,
-            userId: public_user_data.user_id,
-            role,
-            status: membershipStatus,
           },
         });
 
-        console.log(
-          `Membership ${membershipStatus} for user ${public_user_data.user_id} in org ${organization.id}`
-        );
+        console.log(`User ${id} synced to database`);
       }
 
-      res.status(200).json(new ApiResponse(201, "USER SYNCED IN DATABASE"));
+      res.json(new ApiResponse(200, "USER SYNCED IN DATABASE"));
     }
   );
 }
