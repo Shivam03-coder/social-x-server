@@ -1,0 +1,1 @@
+export const decryptData = (ciphertext:string) =>{}
