@@ -58,6 +58,13 @@ export class OrganizationController {
         where: {
           adminId: user.id,
         },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          imageUrl: true,
+          createdAt: true,
+        },
       });
 
       res.status(200).json(new ApiResponse(200, "Organizations fetched", orgs));
