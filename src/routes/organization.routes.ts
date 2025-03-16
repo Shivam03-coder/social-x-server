@@ -15,4 +15,8 @@ organizationRouter
   )
   .get(requireAuth(), OrganizationController.GetOrgs);
 
+organizationRouter
+  .route("/invitations/:orgId")
+  .post(requireAuth(), OrganizationController.SendInvitations);
+
 export default organizationRouter;
