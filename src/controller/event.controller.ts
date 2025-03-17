@@ -46,4 +46,26 @@ export class EventController {
       res.status(200).json(new ApiResponse(200, "Events fetched", events));
     }
   );
+
+  public static CreateEvent = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { orgId } = req.params;
+      const user = await GlobalUtils.checkUserId(req);
+      const { title, startTime, endTime, description } = req.body;
+      const event = await db.event.create({
+        data: {
+          title,
+          startTime,
+          endTime,
+          description,
+          organizationId: orgId,
+          teamAdminId: user.id,
+        },
+      });
+
+      res
+        .status(201)
+        .json(new ApiResponse(201, "Event created succesfully", event));
+    }
+  );
 }

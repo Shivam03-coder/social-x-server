@@ -73,13 +73,13 @@ model Event {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  clientId   String
-  teamClient User   @relation("ClientEvents", fields: [clientId], references: [id], onDelete: Cascade)
+  clientId   String?
+  teamClient User?   @relation("ClientEvents", fields: [clientId], references: [id], onDelete: Cascade)
 
-  teamMemberId String
-  teamMember   User   @relation("TeamMemberEvents", fields: [teamMemberId], references: [id], onDelete: Cascade)
+  teamMemberId String?
+  teamMember   User?   @relation("TeamMemberEvents", fields: [teamMemberId], references: [id], onDelete: Cascade)
 
-  postId String @unique
+  postId String? @unique
   Post   Post?
 
   @@unique([organizationId, title])
