@@ -47,12 +47,11 @@ class MailService {
         } else if (invitationType === "EVENT") {
           if (!eventId)
             throw new Error("Event ID is required for event invites");
-
           inviteUrl = `http://localhost:3000/invite/event/accept?email=${encodeURIComponent(
             email
           )}&eventId=${encodeURIComponent(eventId)}&role=${encodeURIComponent(
             role
-          )}`;
+          )}&orgId=${encodeURIComponent(orgId!)}`;
 
           subject = "You're invited to our event!";
           title = "Join Our Event!";

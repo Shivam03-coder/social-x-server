@@ -39,14 +39,19 @@ export class EventController {
               ...query,
             },
           },
-          teamClient: {
-            select: {
-              ...query,
+          participants: {
+            where: {
+              role: {
+                in: ["CLIENT", "MEMBER"],
+              },
             },
-          },
-          teamMember: {
             select: {
-              ...query,
+              user: {
+                select: {
+                  ...query,
+                  role: true,
+                },
+              },
             },
           },
         },
@@ -120,6 +125,7 @@ export class EventController {
           emails,
           eventId,
           role,
+          orgId,
         });
         res.json(new ApiResponse(200, `Invitations sent  successfully`));
       } catch (error) {
@@ -132,6 +138,8 @@ export class EventController {
   public static AcceptEventInvite = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { orgId, eventId, role, email } = req.params;
+      console.log("🚀 ~ EventController ~ orgId:", orgId);
+
       const { firstName, lastName, instagramId } = req.body;
 
       if (!firstName || !lastName) {
@@ -144,7 +152,7 @@ export class EventController {
         throw new ApiError(400, "Role must be MEMBER or CLIENT.");
       }
 
-      const userRole = normalizedRole as OrgMemberRole;
+      const userRole = normalizedRole as "MEMBER" | "CLIENT";
 
       const org = await db.organization.findFirst({
         where: { id: orgId },
@@ -183,14 +191,10 @@ export class EventController {
           savedUserRole = existingUser.role;
         }
 
-        const alreadyMember = await tx.event.findFirst({
+        const alreadyMember = await tx.eventParticipant.findFirst({
           where: {
-            organizationId: orgId,
-            OR: [
-              { teamAdminId: userId },
-              { clientId: userId },
-              { teamMemberId: userId },
-            ],
+            eventId,
+            userId,
           },
         });
 
@@ -198,19 +202,19 @@ export class EventController {
           throw new ApiError(400, "User is already a member of this Event.");
         }
 
-        if (userRole === "CLIENT") {
+        await tx.eventParticipant.create({
+          data: {
+            userId,
+            eventId,
+            role: userRole,
+          },
+        });
+
+        if (instagramId) {
           await tx.event.update({
             where: { id: eventId },
             data: {
-              clientId: userId,
               instagramId,
-            },
-          });
-        } else if (userRole === "MEMBER") {
-          await tx.event.update({
-            where: { id: eventId },
-            data: {
-              teamMemberId: userId,
             },
           });
         }
@@ -225,7 +229,7 @@ export class EventController {
 
       res
         .status(200)
-        .json(new ApiResponse(200, "Invite accepted successfully"));
+        .json(new ApiResponse(200, "Invite accepted successfully", result));
     }
   );
 }
