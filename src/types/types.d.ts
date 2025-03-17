@@ -14,3 +14,11 @@ export type UserType = {
 export interface DecryptedRequest extends Request {
   decryptedData?: any;
 }
+
+export interface SendInviteEmailOptions {
+  emails: string[];
+  orgId?: string;
+  eventId?: string;
+  role?: RoleType;
+  invitationType: "ORGANIZATION" | "EVENT";
+}

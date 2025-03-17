@@ -1,6 +1,12 @@
+import { OrgMemberRole } from "@prisma/client";
 import { db } from "@src/db";
 import { GlobalUtils } from "@src/global";
-import { ApiResponse, AsyncHandler } from "@src/utils/server-functions";
+import MailService from "@src/services/nodemailer";
+import {
+  ApiError,
+  ApiResponse,
+  AsyncHandler,
+} from "@src/utils/server-functions";
 import { Request, Response } from "express";
 
 export class EventController {
@@ -73,6 +79,153 @@ export class EventController {
       });
 
       res.status(201).json(new ApiResponse(201, "Event created succesfully"));
+    }
+  );
+
+  public static SendEventInvite = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { orgId, eventId } = req.params;
+      const { emails, role } = req.body;
+      const user = await GlobalUtils.checkUserId(req);
+
+      if (!emails || !Array.isArray(emails) || emails.length === 0)
+        throw new ApiError(400, "Missing required fields");
+
+      if (!role || !["MEMBER", "CLIENT"].includes(role))
+        throw new ApiError(400, "Role must be MEMBER or CLIENT.");
+
+      const org = await db.organization.findFirst({
+        where: {
+          id: orgId,
+          adminId: user.id,
+        },
+      });
+
+      if (!org) {
+        throw new ApiError(403, "Unauthorized to send invitations");
+      }
+
+      const isEvent = await db.event.findUnique({
+        where: {
+          id: eventId,
+          organizationId: org?.id,
+        },
+      });
+      if (!isEvent) {
+        throw new ApiError(404, "Event not found");
+      }
+      try {
+        await MailService.sendInviteEmail({
+          invitationType: "EVENT",
+          emails,
+          eventId,
+          role,
+        });
+        res.json(new ApiResponse(200, `Invitations sent  successfully`));
+      } catch (error) {
+        throw new ApiError(500, "Failed to send invitations");
+      }
+      res.status(200).json(new ApiResponse(200, "Invite sent successfully"));
+    }
+  );
+
+  public static AcceptEventInvite = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { orgId, eventId, role, email } = req.params;
+      const { firstName, lastName, instagramId } = req.body;
+
+      if (!firstName || !lastName) {
+        throw new ApiError(400, "Missing required fields");
+      }
+
+      const normalizedRole = role.toUpperCase();
+
+      if (!["MEMBER", "CLIENT"].includes(normalizedRole)) {
+        throw new ApiError(400, "Role must be MEMBER or CLIENT.");
+      }
+
+      const userRole = normalizedRole as OrgMemberRole;
+
+      const org = await db.organization.findFirst({
+        where: { id: orgId },
+      });
+
+      if (!org) {
+        throw new ApiError(404, "Organization not found");
+      }
+
+      const existingUser = await db.user.findUnique({
+        where: { email: email.toLowerCase() },
+        select: { id: true, role: true },
+      });
+
+      const result = await db.$transaction(async (tx) => {
+        let userId: string;
+        let savedUserRole: OrgMemberRole;
+
+        if (!existingUser) {
+          const newUser = await tx.user.create({
+            data: {
+              email: email.toLowerCase(),
+              firstName,
+              lastName,
+              role: userRole,
+            },
+            select: {
+              id: true,
+              role: true,
+            },
+          });
+          userId = newUser.id;
+          savedUserRole = newUser.role;
+        } else {
+          userId = existingUser.id;
+          savedUserRole = existingUser.role;
+        }
+
+        const alreadyMember = await tx.event.findFirst({
+          where: {
+            organizationId: orgId,
+            OR: [
+              { teamAdminId: userId },
+              { clientId: userId },
+              { teamMemberId: userId },
+            ],
+          },
+        });
+
+        if (alreadyMember) {
+          throw new ApiError(400, "User is already a member of this Event.");
+        }
+
+        if (userRole === "CLIENT") {
+          await tx.event.update({
+            where: { id: eventId },
+            data: {
+              clientId: userId,
+              instagramId,
+            },
+          });
+        } else if (userRole === "MEMBER") {
+          await tx.event.update({
+            where: { id: eventId },
+            data: {
+              teamMemberId: userId,
+            },
+          });
+        }
+
+        return { id: userId, role: savedUserRole };
+      });
+
+      if (userRole === "CLIENT") {
+        GlobalUtils.setCookie(res, "UserId", result.id);
+        GlobalUtils.setCookie(res, "UserRole", result.role);
+      }
+
+      res
+        .status(200)
+        .json(new ApiResponse(200, "Invite accepted successfully"));
     }
   );
 }

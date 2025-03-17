@@ -96,7 +96,12 @@ export class OrganizationController {
       }
 
       try {
-        await MailService.sendEmail(emails, orgId, role);
+        await MailService.sendInviteEmail({
+          invitationType: "ORGANIZATION",
+          emails,
+          orgId,
+          role,
+        });
         res.json(new ApiResponse(200, `Invitations sent  successfully`));
       } catch (error) {
         throw new ApiError(500, "Failed to send invitations");
@@ -134,8 +139,6 @@ export class OrganizationController {
         where: { email: email.toLowerCase() },
         select: { id: true, role: true },
       });
-
-      console.log(existingUser);
 
       const result = await db.$transaction(async (tx) => {
         let userId: string;
