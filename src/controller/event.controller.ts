@@ -26,18 +26,21 @@ export class EventController {
             select: {
               id: true,
               firstName: true,
+              lastName: true,
             },
           },
           teamClient: {
             select: {
               id: true,
               firstName: true,
+              lastName: true,
             },
           },
           teamMember: {
             select: {
               id: true,
               firstName: true,
+              lastName: true,
             },
           },
         },
