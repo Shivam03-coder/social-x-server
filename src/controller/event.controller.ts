@@ -8,6 +8,12 @@ export class EventController {
     async (req: Request, res: Response): Promise<void> => {
       const { orgId } = req.params;
       const user = await GlobalUtils.checkUserId(req);
+      const query = {
+        id: true,
+        firstName: true,
+        lastName: true,
+        imageUrl: true,
+      };
 
       const events = await db.event.findMany({
         where: {
@@ -24,25 +30,22 @@ export class EventController {
           updatedAt: true,
           teamAdmin: {
             select: {
-              id: true,
-              firstName: true,
-              lastName: true,
+              ...query,
             },
           },
           teamClient: {
             select: {
-              id: true,
-              firstName: true,
-              lastName: true,
+              ...query,
             },
           },
           teamMember: {
             select: {
-              id: true,
-              firstName: true,
-              lastName: true,
+              ...query,
             },
           },
+        },
+        orderBy: {
+          createdAt: "desc",
         },
       });
 
@@ -55,7 +58,10 @@ export class EventController {
       const { orgId } = req.params;
       const user = await GlobalUtils.checkUserId(req);
       const { title, startTime, endTime, description } = req.body;
-      const event = await db.event.create({
+      console.log(
+        `Creating event for ${startTime} organization ${orgId} by team admin ${user.id}`
+      );
+      await db.event.create({
         data: {
           title,
           startTime,
@@ -66,9 +72,7 @@ export class EventController {
         },
       });
 
-      res
-        .status(201)
-        .json(new ApiResponse(201, "Event created succesfully", event));
+      res.status(201).json(new ApiResponse(201, "Event created succesfully"));
     }
   );
 }
