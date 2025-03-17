@@ -1,9 +1,7 @@
 import { db } from "@src/db";
 import { GlobalUtils } from "@src/global";
 import CloudinaryService from "@src/services/cloudinary";
-import GetImageUrlFromCloudinary from "@src/services/cloudinary";
 import MailService from "@src/services/nodemailer";
-import { DecryptedRequest } from "@src/types/types";
 import { OrgMemberRole } from "@prisma/client";
 import {
   ApiError,
@@ -166,7 +164,7 @@ export class OrganizationController {
         const alreadyMember = await tx.organizationMember.findFirst({
           where: {
             organizationId: orgId,
-            userId: userId,
+            memberId: userId,
           },
         });
 
@@ -180,7 +178,7 @@ export class OrganizationController {
         await tx.organizationMember.create({
           data: {
             organizationId: orgId,
-            userId: userId,
+            memberId: userId,
             role: memberRole,
           },
         });
@@ -196,6 +194,51 @@ export class OrganizationController {
         .json(
           new ApiResponse(201, "Invitation accepted successfully!", result)
         );
+    }
+  );
+
+  public static GetOrgMembers = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { orgId } = req.params;
+      const user = await GlobalUtils.checkUserId(req);
+
+      const org = await db.organization.findFirst({
+        where: {
+          id: orgId,
+          adminId: user.id,
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          imageUrl: true,
+          createdAt: true,
+        },
+      });
+
+      if (!org) {
+        throw new ApiError(404, "Organization not found");
+      }
+
+      const members = await db.organizationMember.findMany({
+        where: {
+          organizationId: org.id,
+        },
+        select: {
+          member: {
+            select: {
+              email: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+            },
+          },
+        },
+      });
+
+      res
+        .status(200)
+        .json(new ApiResponse(200, "Organization members fetched", members));
     }
   );
 }

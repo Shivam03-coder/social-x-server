@@ -17,6 +17,9 @@ model User {
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   organizationMembers OrganizationMember[]
+  eventsAsClient      Event[]              @relation("ClientEvents")
+  eventsAsTeamMember  Event[]              @relation("TeamMemberEvents")
+  eventsAsTeamAdmin   Event[]              @relation("TeamAdminEvents")
 
   @@map("Users")
 }
@@ -30,26 +33,70 @@ model Organization {
   createdAt DateTime             @default(now())
   updatedAt DateTime             @updatedAt
   members   OrganizationMember[]
+  Event     Event[]
 
   @@map("Organizations")
 }
 
 model OrganizationMember {
-  id             String           @id @default(cuid())
+  id         String           @id @default(cuid())
+  role       OrgMemberRole    @default(MEMBER)
+  status     MembershipStatus @default(PENDING)
+  invitedAt  DateTime         @default(now())
+  acceptedAt DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
   organizationId String
-  userId         String
-  role           OrgMemberRole    @default(MEMBER)
-  status         MembershipStatus @default(PENDING)
-  invitedAt      DateTime         @default(now())
-  acceptedAt     DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberId       String
+  member         User         @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([organizationId, userId])
+  @@unique([organizationId])
   @@map("OrganizationMembers")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  instagramId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // RELATIONS
+  teamAdminId String
+  teamAdmin   User   @relation("TeamAdminEvents", fields: [teamAdminId], references: [id])
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  clientId   String
+  teamClient User   @relation("ClientEvents", fields: [clientId], references: [id], onDelete: Cascade)
+
+  teamMemberId String
+  teamMember   User   @relation("TeamMemberEvents", fields: [teamMemberId], references: [id], onDelete: Cascade)
+
+  postId String @unique
+  Post   Post?
+
+  @@unique([organizationId, title])
+  @@map("Events")
+}
+
+model Post {
+  id            String    @id @default(cuid())
+  postScheduled DateTime?
+  eventId       String?   @unique
+  event         Event?    @relation(references: [id], fields: [eventId], onDelete: Cascade)
+  textContent   String?
+  imageUrl      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("Posts")
 }
 
 enum GlobalRole {

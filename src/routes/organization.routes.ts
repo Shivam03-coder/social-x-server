@@ -24,4 +24,9 @@ organizationRouter
   .route("/invitations/accept/:orgId/:role/:email")
   .post(OrganizationController.AcceptOrgInvitation);
 
+// GetOrgMembers
+organizationRouter
+  .route("/:orgId/members")
+  .get(requireAuth(), OrganizationController.GetOrgMembers);
+
 export default organizationRouter;
