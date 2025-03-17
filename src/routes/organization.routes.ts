@@ -25,7 +25,7 @@ organizationRouter
 
 // GetOrgMembers
 organizationRouter
-  .route("/:orgId/members")
+  .route("/members/:orgId")
   .get(requireAuth(), OrganizationController.GetOrgMembers);
 
 export default organizationRouter;

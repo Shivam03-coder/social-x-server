@@ -207,13 +207,6 @@ export class OrganizationController {
           id: orgId,
           adminId: user.id,
         },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          imageUrl: true,
-          createdAt: true,
-        },
       });
 
       if (!org) {
