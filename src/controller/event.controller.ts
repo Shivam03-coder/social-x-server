@@ -219,12 +219,15 @@ export class EventController {
           });
         }
 
-        return { id: userId, role: savedUserRole };
+        return {
+          id: userId,
+          role: userRole === "CLIENT" ? "CLIENT" : "MEMBER",
+        };
       });
 
       if (userRole === "CLIENT") {
         GlobalUtils.setCookie(res, "UserId", result.id);
-        GlobalUtils.setCookie(res, "UserRole", result.role);
+        GlobalUtils.setCookie(res, "UserRole", userRole);
       }
 
       res
