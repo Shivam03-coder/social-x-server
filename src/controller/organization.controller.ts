@@ -67,10 +67,19 @@ export class OrganizationController {
           slug: true,
           imageUrl: true,
           createdAt: true,
+          members: {
+            select: {
+              member: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+          },
         },
-        orderBy : {
-          createdAt: "desc",
-        }
+        orderBy: { createdAt: "desc" },
       });
 
       res.status(200).json(new ApiResponse(200, "Organizations fetched", orgs));
@@ -185,7 +194,6 @@ export class OrganizationController {
           data: {
             organizationId: orgId,
             memberId: userId,
-            role: memberRole,
           },
         });
 

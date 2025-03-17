@@ -39,14 +39,9 @@ model Organization {
 }
 
 model OrganizationMember {
-  id         String           @id @default(cuid())
-  role       OrgMemberRole    @default(MEMBER)
-  status     MembershipStatus @default(PENDING)
-  invitedAt  DateTime         @default(now())
-  acceptedAt DateTime?
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
-
+  id             String       @id @default(cuid())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   memberId       String
