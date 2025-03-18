@@ -1,51 +1,42 @@
-import { faker } from "@faker-js/faker";
 import { PrismaClient } from "@prisma/client";
+import { faker } from "@faker-js/faker";
 
-const db = new PrismaClient();
-const eventId = "cm8cyfgr600010wr8kgktuu3g";
-const orgId = "cm8cn4qcp00000wavzk4ctgca";
+const prisma = new PrismaClient();
+
 async function main() {
-  const title = faker.lorem.sentence();
-  const subtitle = faker.lorem.words(5);
-  const description = faker.lorem.paragraph();
-  const hashtags = faker.helpers
-    .arrayElements(["#fun", "#tech", "#event", "#2025"], 2)
-    .join(" ");
-  const mediaUrl = faker.image.urlPicsumPhotos();
-  const additional = faker.lorem.words(3);
+  const organizationId = "cm8es8cem00000weot9bqjvy8";
+  const teamAdminId = "user_2uV3DG6M3IuMxjNHM1oLYMKWW4B";
 
-  const postData = {
-    title,
-    subtitle,
-    description,
-    hashtags,
-    mediaUrl,
-    additional,
-    eventId,
-    orgId,
-  };
+  const events = Array.from({ length: 12 }).map(() => ({
+    title: faker.company.name() + " Launch Event",
+    description: faker.lorem.paragraphs(2),
+    startTime: faker.date.soon({ days: 30 }),
+    endTime: faker.date.soon({ days: 60 }),
+  }));
 
-  const res = await db.$transaction(async (tx) => {
-    const createdPost = await tx.post.create({ data: postData });
-    await tx.event.update({
-      where: {
-        id: createdPost.eventId!,
-      },
+  for (const event of events) {
+    const createdEvent = await prisma.event.create({
       data: {
-        postId: createdPost.id,
+        title: event.title,
+        description: event.description,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        teamAdminId,
+        organizationId,
       },
     });
-    return createdPost;
-  });
-  console.log("Created post:", res);
+
+    console.log(`✅ Created event: ${createdEvent.title}`);
+  }
+
+  console.log("✅✅ Seeded 12 events successfully!");
 }
 
 main()
-  .then(async () => {
-    await db.$disconnect();
-  })
-  .catch(async (e) => {
-    console.error("❌ Error creating post:", e);
-    await db.$disconnect();
+  .catch((e) => {
+    console.error("❌ Error seeding events:", e);
     process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
   });

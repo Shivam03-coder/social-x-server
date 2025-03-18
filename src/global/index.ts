@@ -10,46 +10,16 @@ export class GlobalUtils {
     return decryptedData;
   };
 
-  public static setCookie = (
-    res: Response,
-    name: string,
-    value: string,
-    options?: {
-      maxAge?: number;
-      httpOnly?: boolean;
-      secure?: boolean;
-      sameSite?: boolean | "lax" | "strict" | "none";
-      path?: string;
-    }
-  ) => {
-    res.cookie(name, value, {
-      httpOnly: options?.httpOnly !== undefined ? options.httpOnly : true,
-      sameSite: options?.sameSite || "strict",
-      secure:
-        options?.secure !== undefined
-          ? options.secure
-          : process.env.NODE_ENV === "production",
-      path: options?.path || "/",
-      maxAge:
-        options?.maxAge !== undefined
-          ? options.maxAge
-          : 1000 * 60 * 60 * 24 * 45,
-    });
+  public static setCookie = (res: Response, name: string, value: string) => {
+    res.cookie(name, value);
   };
 
   public static setMultipleCookies = (
     res: Response,
-    cookies: { name: string; value: string }[],
-    options?: {
-      maxAge?: number;
-      httpOnly?: boolean;
-      secure?: boolean;
-      sameSite?: boolean | "lax" | "strict" | "none";
-      path?: string;
-    }
+    cookies: { name: string; value: string }[]
   ) => {
     cookies.forEach(({ name, value }) => {
-      GlobalUtils.setCookie(res, name, value, options);
+      GlobalUtils.setCookie(res, name, value);
     });
   };
 
