@@ -13,6 +13,8 @@ export class EventController {
   public static GetEvents = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { orgId } = req.params;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 9;
       const user = await db.user.CheckUserId(req);
       const query = {
         id: true,
@@ -20,7 +22,7 @@ export class EventController {
         lastName: true,
         imageUrl: true,
       };
-
+      const skip = (page - 1) * limit;
       const events = await db.event.findMany({
         where: {
           organizationId: orgId,
@@ -55,6 +57,8 @@ export class EventController {
             },
           },
         },
+        skip: skip,
+        take: limit,
         orderBy: {
           createdAt: "desc",
         },
@@ -138,7 +142,6 @@ export class EventController {
   public static AcceptEventInvite = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { orgId, eventId, role, email } = req.params;
-      console.log("🚀 ~ EventController ~ orgId:", orgId);
 
       const { firstName, lastName, instagramId } = req.body;
 
