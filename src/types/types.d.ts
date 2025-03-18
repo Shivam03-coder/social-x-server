@@ -1,3 +1,4 @@
+import { ApiResponse } from "@src/utils/server-functions";
 import { Request } from "express";
 import { Router, RequestHandler } from "express";
 
@@ -21,4 +22,12 @@ export interface SendInviteEmailOptions {
   eventId?: string;
   role?: RoleType;
   invitationType: "ORGANIZATION" | "EVENT";
+}
+
+export interface UserType  {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  imageUrl: string;
 }

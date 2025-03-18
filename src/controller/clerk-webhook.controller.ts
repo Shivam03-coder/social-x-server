@@ -54,27 +54,30 @@ export class ClerkWebhookController {
       );
 
       if (eventType === "user.created" || eventType === "user.updated") {
-        await db.user.upsert({
-          where: { id },
-          update: {
-            email,
-            firstName: first_name,
-            lastName: last_name,
-            imageUrl: image_url,
-          },
-          create: {
-            id,
-            email,
-            firstName: first_name,
-            lastName: last_name,
-            imageUrl: image_url,
-          },
-        });
-
-        console.log(`User ${id} synced to database`);
+        try {
+          const user = await db.user.create({
+            data: {
+              id,
+              email,
+              firstName: first_name,
+              lastName: last_name,
+              imageUrl: image_url,
+            },
+          });
+          console.log("🚀 User successfully synced to DB:");
+        } catch (error) {
+          console.error("❌ Failed to sync user to DB:", error);
+        }
       }
 
       res.json(new ApiResponse(200, "USER SYNCED IN DATABASE"));
+    }
+  );
+
+  public static UserInfo = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const user = await db.user.CheckUserId(req);
+      res.json(new ApiResponse(200, "USER FOUND", user));
     }
   );
 }

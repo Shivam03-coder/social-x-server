@@ -1,6 +1,5 @@
 import { db } from "@src/db";
 import { GlobalUtils } from "@src/global";
-import CloudinaryService from "@src/services/cloudinary";
 import MailService from "@src/services/nodemailer";
 import {
   ApiError,
@@ -14,24 +13,12 @@ export class OrganizationController {
     async (req: Request, res: Response): Promise<void> => {
       const user = await db.user.CheckUserId(req);
       const { name, slug } = req.body;
-
       if (!name || !slug) {
         throw new ApiError(400, "Missing required fields");
       }
       console.log(name, slug);
 
-      let imageUrl: string | null = null;
-
-      if (req.file && req.file.path) {
-        const uploadedImage = await CloudinaryService.uploadImages(
-          req.file.path
-        );
-        if (!uploadedImage) {
-          throw new ApiError(500, "Image upload failed");
-        }
-        imageUrl = uploadedImage as string;
-      }
-
+      const imageUrl = await GlobalUtils.getImageUrl(req);
       const newOrg = await db.organization.create({
         data: {
           name,
@@ -40,14 +27,16 @@ export class OrganizationController {
           adminId: user.id,
         },
         select: {
-          adminId: true,
+          id: true,
         },
       });
 
       res
         .status(201)
         .json(
-          new ApiResponse(201, "Organization created successfully", newOrg)
+          new ApiResponse(201, "Organization created successfully", {
+            orgId: newOrg.id,
+          })
         );
     }
   );
@@ -156,13 +145,11 @@ export class OrganizationController {
       GlobalUtils.setCookie(res, "UserId", Member.id);
       GlobalUtils.setCookie(res, "UserRole", "MEMBER");
 
-      res
-        .status(201)
-        .json(
-          new ApiResponse(201, "Invitation accepted successfully!", {
-            memberId: Member.id,
-          })
-        );
+      res.status(201).json(
+        new ApiResponse(201, "Invitation accepted successfully!", {
+          memberId: Member.id,
+        })
+      );
     }
   );
 
@@ -219,6 +206,40 @@ export class OrganizationController {
       }
       await db.organization.delete({ where: { id: orgId } });
       res.status(200).json(new ApiResponse(200, "Organization deleted"));
+    }
+  );
+
+  public static GetOrganizationByMemberid = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const Member = await db.user.CheckUserId(req);
+
+      const getOrgs = await db.organization.findMany({
+        where: {
+          members: {
+            some: {
+              memberId: Member.id,
+            },
+          },
+        },
+        select: {
+          id: true,
+          imageUrl: true,
+          events: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              startTime: true,
+              endTime: true,
+            },
+          },
+        },
+      });
+
+      res.status(200).json({
+        success: true,
+        data: getOrgs,
+      });
     }
   );
 }

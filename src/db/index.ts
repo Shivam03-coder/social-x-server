@@ -9,11 +9,19 @@ export const db = new PrismaClient().$extends({
     user: {
       async CheckUserId(req: Request) {
         const { userId } = getAuth(req);
+        console.log("🚀 ~ CheckUserId ~ userId:", userId);
         if (!userId) {
           throw new ApiError(401, "Unauthorized");
         }
-        const user = await db.user.findUnique({
+        const user = await db.user.findFirst({
           where: { id: userId },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            imageUrl: true,
+          },
         });
         if (!user) {
           throw new ApiError(404, "User not found");
