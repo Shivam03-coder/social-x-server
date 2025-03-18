@@ -2,33 +2,42 @@ import { faker } from "@faker-js/faker";
 import { PrismaClient } from "@prisma/client";
 
 const db = new PrismaClient();
-const adminId = "user_2uQoZzUF3BbRp6f5sgq8N3Vl8IJ";
+const eventId = "cm8cyfgr600010wr8kgktuu3g";
 const orgId = "cm8cn4qcp00000wavzk4ctgca";
-
 async function main() {
-  // Create 12 organizations
-  const events = Array.from({ length: 12 }).map(() => {
-    const title = faker.lorem.words(3);
-    const description = faker.lorem.sentence();
-    const startTime = faker.date.future();
-    const endTime = faker.date.future({ refDate: startTime });
+  const title = faker.lorem.sentence();
+  const subtitle = faker.lorem.words(5);
+  const description = faker.lorem.paragraph();
+  const hashtags = faker.helpers
+    .arrayElements(["#fun", "#tech", "#event", "#2025"], 2)
+    .join(" ");
+  const mediaUrl = faker.image.urlPicsumPhotos();
+  const additional = faker.lorem.words(3);
 
-    return {
-      title,
-      description,
-      startTime,
-      endTime,
-      organizationId: orgId,
-      teamAdminId: adminId,
-    };
+  const postData = {
+    title,
+    subtitle,
+    description,
+    hashtags,
+    mediaUrl,
+    additional,
+    eventId,
+    orgId,
+  };
+
+  const res = await db.$transaction(async (tx) => {
+    const createdPost = await tx.post.create({ data: postData });
+    await tx.event.update({
+      where: {
+        id: createdPost.eventId!,
+      },
+      data: {
+        postId: createdPost.id,
+      },
+    });
+    return createdPost;
   });
-
-  // Insert all events
-  await db.event.createMany({
-    data: events,
-  });
-
-  console.log("✅ Seeded 12 events for organization:", orgId);
+  console.log("Created post:", res);
 }
 
 main()
@@ -36,7 +45,7 @@ main()
     await db.$disconnect();
   })
   .catch(async (e) => {
-    console.error("❌ Seed error:", e);
+    console.error("❌ Error creating post:", e);
     await db.$disconnect();
     process.exit(1);
   });

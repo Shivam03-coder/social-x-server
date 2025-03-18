@@ -34,6 +34,7 @@ model Organization {
   updatedAt DateTime             @updatedAt
   members   OrganizationMember[]
   events    Event[]
+  Post      Post[]
 
   @@map("Organizations")
 }
@@ -52,14 +53,15 @@ model OrganizationMember {
 }
 
 model Event {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  startTime   DateTime
-  endTime     DateTime
-  instagramId String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  title               String
+  description         String?
+  startTime           DateTime
+  endTime             DateTime
+  instagramId         String?
+  instagramIdPassword String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   teamAdminId String
   teamAdmin   User   @relation("TeamAdminEvents", fields: [teamAdminId], references: [id])
@@ -91,21 +93,51 @@ model EventParticipant {
 }
 
 model Post {
-  id            String    @id @default(cuid())
-  postScheduled DateTime?
-  eventId       String?   @unique
-  event         Event?    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  textContent   String?
-  imageUrl      String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String   @id @default(cuid())
+  title           String
+  hashtags        String
+  description     String
+  subtitle        String?
+  additional      String?
+  mediaUrl        String?
+  isPublished     Boolean  @default(false)
+  confirmByClient Boolean? @default(false)
+  postType        PostType @default(POST)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  PostSchedule PostSchedule?
+  orgId        String        @unique
+  organization Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  eventId      String?       @unique
+  event        Event?        @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@map("Posts")
+}
+
+model PostSchedule {
+  id               String           @id @default(cuid())
+  postScheduleTime DateTime
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  postId           String           @unique
+  post             Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  canBeScheduledBy PostScheduleRole @default(ADMIN)
 }
 
 enum GlobalRole {
   ADMIN
   CLIENT
+  MEMBER
+}
+
+enum PostType {
+  POST
+  REEL
+}
+
+enum PostScheduleRole {
+  ADMIN
   MEMBER
 }
 

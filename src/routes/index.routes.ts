@@ -1,6 +1,7 @@
 import authRouter from "./clerk-webhook.routes";
 import eventRouter from "./event.routes";
 import organizationRouter from "./organization.routes";
+import postRouter from "./post.routes";
 
 export default [
   { path: "clerk", router: authRouter },
@@ -11,5 +12,9 @@ export default [
   {
     path: "events",
     router: eventRouter,
+  },
+  {
+    path: "posts",
+    router: postRouter,
   },
 ];

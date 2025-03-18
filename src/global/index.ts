@@ -1,5 +1,6 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import { ApiError } from "@src/utils/server-functions";
+import CloudinaryService from "@src/services/cloudinary";
 
 export class GlobalUtils {
   public static getDecryptedData = (decryptedData: any) => {
@@ -50,5 +51,17 @@ export class GlobalUtils {
     cookies.forEach(({ name, value }) => {
       GlobalUtils.setCookie(res, name, value, options);
     });
+  };
+
+  public static getImageUrl = async (req: Request) => {
+    let imageUrl: string | null = null;
+    if (req.file && req.file.path) {
+      const uploadedImage = await CloudinaryService.uploadImages(req.file.path);
+      if (!uploadedImage) {
+        throw new ApiError(500, "Image upload failed");
+      }
+      return (imageUrl = uploadedImage as string);
+    }
+    return imageUrl;
   };
 }

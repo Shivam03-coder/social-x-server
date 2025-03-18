@@ -2,7 +2,6 @@ import { db } from "@src/db";
 import { GlobalUtils } from "@src/global";
 import CloudinaryService from "@src/services/cloudinary";
 import MailService from "@src/services/nodemailer";
-import { OrgMemberRole } from "@prisma/client";
 import {
   ApiError,
   AsyncHandler,
@@ -123,67 +122,43 @@ export class OrganizationController {
 
   public static AcceptOrgInvitation = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const { orgId, role, email } = req.params;
+      const { orgId, email } = req.params;
       const { firstName, lastName } = req.body;
 
       if (!firstName || !lastName) {
-        throw new ApiError(400, "Missing required fields");
+        throw new ApiError(
+          400,
+          "Missing required fields: firstName or lastName."
+        );
       }
 
-      const normalizedRole = role.toUpperCase();
-
-      if (!["MEMBER", "CLIENT"].includes(normalizedRole)) {
-        throw new ApiError(400, "Role must be MEMBER or CLIENT.");
-      }
-
-      const memberRole = normalizedRole as "MEMBER" | "CLIENT" | "ADMIN";
-      const userRole = normalizedRole as OrgMemberRole;
-
-      const org = await db.organization.findFirst({
+      const organization = await db.organization.findFirst({
         where: { id: orgId },
       });
 
-      if (!org) {
-        throw new ApiError(404, "Organization not found");
+      if (!organization) {
+        throw new ApiError(404, "Organization not found.");
       }
 
-      const existingUser = await db.user.findUnique({
+      const user = await db.user.update({
         where: { email: email.toLowerCase() },
+        data: {
+          role: "MEMBER",
+          firstName,
+          lastName,
+        },
         select: { id: true, role: true },
       });
 
       const result = await db.$transaction(async (tx) => {
-        let userId: string;
-        let savedUserRole: OrgMemberRole;
-
-        if (!existingUser) {
-          const newUser = await tx.user.create({
-            data: {
-              firstName,
-              lastName,
-              email: email.toLowerCase(),
-              role: userRole,
-            },
-            select: {
-              id: true,
-              role: true,
-            },
-          });
-          userId = newUser.id;
-          savedUserRole = newUser.role;
-        } else {
-          userId = existingUser.id;
-          savedUserRole = existingUser.role;
-        }
-
-        const alreadyMember = await tx.organizationMember.findFirst({
+        const existingMember = await tx.organizationMember.findFirst({
           where: {
             organizationId: orgId,
-            memberId: userId,
+            memberId: user.id,
           },
         });
 
-        if (alreadyMember) {
+        if (existingMember) {
           throw new ApiError(
             400,
             "User is already a member of this organization."
@@ -193,11 +168,11 @@ export class OrganizationController {
         await tx.organizationMember.create({
           data: {
             organizationId: orgId,
-            memberId: userId,
+            memberId: user.id,
           },
         });
 
-        return { id: userId, role: savedUserRole };
+        return { id: user.id, role: user.role };
       });
 
       GlobalUtils.setCookie(res, "UserId", result.id);
