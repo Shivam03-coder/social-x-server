@@ -21,7 +21,7 @@ organizationRouter
 // NOT A PROTECTED ROUTE
 organizationRouter
   .route("/invitations/accept/:orgId/:role/:email")
-  .post(OrganizationController.AcceptOrgInvitation);
+  .post(requireAuth(), OrganizationController.AcceptOrgInvitation);
 
 // GetOrgMembers
 organizationRouter

@@ -123,65 +123,45 @@ export class OrganizationController {
   public static AcceptOrgInvitation = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { orgId, email } = req.params;
-      const { firstName, lastName } = req.body;
-
-      if (!firstName || !lastName) {
-        throw new ApiError(
-          400,
-          "Missing required fields: firstName or lastName."
-        );
-      }
-
+      const Member = await db.user.CheckUserId(req);
       const organization = await db.organization.findFirst({
         where: { id: orgId },
       });
-
       if (!organization) {
         throw new ApiError(404, "Organization not found.");
       }
 
-      const user = await db.user.update({
-        where: { email: email.toLowerCase() },
-        data: {
-          role: "MEMBER",
-          firstName,
-          lastName,
+      const isMemberOfOrg = await db.organizationMember.findUnique({
+        where: {
+          uniqueOrgMember: {
+            organizationId: orgId,
+            memberId: Member.id,
+          },
         },
-        select: { id: true, role: true },
+      });
+      if (isMemberOfOrg) {
+        throw new ApiError(
+          400,
+          "User is already a member of this organization."
+        );
+      }
+
+      await db.organizationMember.create({
+        data: {
+          organizationId: orgId,
+          memberId: Member.id,
+        },
       });
 
-      const result = await db.$transaction(async (tx) => {
-        const existingMember = await tx.organizationMember.findFirst({
-          where: {
-            organizationId: orgId,
-            memberId: user.id,
-          },
-        });
-
-        if (existingMember) {
-          throw new ApiError(
-            400,
-            "User is already a member of this organization."
-          );
-        }
-
-        await tx.organizationMember.create({
-          data: {
-            organizationId: orgId,
-            memberId: user.id,
-          },
-        });
-
-        return { id: user.id, role: user.role };
-      });
-
-      GlobalUtils.setCookie(res, "UserId", result.id);
-      GlobalUtils.setCookie(res, "UserRole", result.role);
+      GlobalUtils.setCookie(res, "UserId", Member.id);
+      GlobalUtils.setCookie(res, "UserRole", "MEMBER");
 
       res
         .status(201)
         .json(
-          new ApiResponse(201, "Invitation accepted successfully!", result)
+          new ApiResponse(201, "Invitation accepted successfully!", {
+            memberId: Member.id,
+          })
         );
     }
   );
