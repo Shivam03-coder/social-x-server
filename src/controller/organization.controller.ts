@@ -31,13 +31,11 @@ export class OrganizationController {
         },
       });
 
-      res
-        .status(201)
-        .json(
-          new ApiResponse(201, "Organization created successfully", {
-            orgId: newOrg.id,
-          })
-        );
+      res.status(201).json(
+        new ApiResponse(201, "Organization created successfully", {
+          orgId: newOrg.id,
+        })
+      );
     }
   );
 
@@ -228,18 +226,16 @@ export class OrganizationController {
             select: {
               id: true,
               title: true,
-              description: true,
               startTime: true,
               endTime: true,
+              instagramId: true,
             },
           },
+          name: true,
+          slug: true,
         },
       });
-
-      res.status(200).json({
-        success: true,
-        data: getOrgs,
-      });
+      res.json(new ApiResponse(200, "Organizations fetched", getOrgs));
     }
   );
 }

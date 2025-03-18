@@ -25,8 +25,8 @@ organizationRouter
 
 // GetOrgMembers
 organizationRouter
-  .route("/members/:orgId")
-  .get(requireAuth(), OrganizationController.GetOrgMembers);
+  .route("/member")
+  .get(requireAuth(), OrganizationController.GetOrganizationByMemberid);
 
 // Delete Orgs
 organizationRouter
