@@ -28,4 +28,9 @@ organizationRouter
   .route("/members/:orgId")
   .get(requireAuth(), OrganizationController.GetOrgMembers);
 
+// Delete Orgs
+organizationRouter
+  .route("/:orgId")
+  .delete(requireAuth(), OrganizationController.DeleteOrganizationByid);
+
 export default organizationRouter;

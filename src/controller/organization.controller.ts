@@ -13,7 +13,7 @@ import { Request, Response } from "express";
 export class OrganizationController {
   public static CreateOrg = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const user = await GlobalUtils.checkUserId(req);
+      const user = await db.user.CheckUserId(req);
       const { name, slug } = req.body;
 
       if (!name || !slug) {
@@ -55,7 +55,7 @@ export class OrganizationController {
 
   public static GetOrgs = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const user = await GlobalUtils.checkUserId(req);
+      const user = await db.user.CheckUserId(req);
 
       const orgs = await db.organization.findMany({
         where: {
@@ -88,7 +88,7 @@ export class OrganizationController {
 
   public static SendOrgInvitations = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const user = await GlobalUtils.checkUserId(req);
+      const user = await db.user.CheckUserId(req);
       const { emails, role } = req.body;
       const { orgId } = req.params;
       if (!emails || !Array.isArray(emails) || emails.length === 0)
@@ -214,7 +214,7 @@ export class OrganizationController {
   public static GetOrgMembers = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { orgId } = req.params;
-      const user = await GlobalUtils.checkUserId(req);
+      const user = await db.user.CheckUserId(req);
 
       const org = await db.organization.findFirst({
         where: {
@@ -246,6 +246,24 @@ export class OrganizationController {
       res
         .status(200)
         .json(new ApiResponse(200, "Organization members fetched", members));
+    }
+  );
+
+  public static DeleteOrganizationByid = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { orgId } = req.params;
+      const user = await db.user.CheckUserId(req);
+      const org = await db.organization.findFirst({
+        where: {
+          id: orgId,
+          adminId: user.id,
+        },
+      });
+      if (!org) {
+        throw new ApiError(404, "Organization not found");
+      }
+      await db.organization.delete({ where: { id: orgId } });
+      res.status(200).json(new ApiResponse(200, "Organization deleted"));
     }
   );
 }

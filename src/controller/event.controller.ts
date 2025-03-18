@@ -13,7 +13,7 @@ export class EventController {
   public static GetEvents = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { orgId } = req.params;
-      const user = await GlobalUtils.checkUserId(req);
+      const user = await db.user.CheckUserId(req);
       const query = {
         id: true,
         firstName: true,
@@ -67,7 +67,7 @@ export class EventController {
   public static CreateEvent = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { orgId } = req.params;
-      const user = await GlobalUtils.checkUserId(req);
+      const user = await db.user.CheckUserId(req);
       const { title, startTime, endTime, description } = req.body;
       console.log(
         `Creating event for ${startTime} organization ${orgId} by team admin ${user.id}`
@@ -91,7 +91,7 @@ export class EventController {
     async (req: Request, res: Response): Promise<void> => {
       const { orgId, eventId } = req.params;
       const { emails, role } = req.body;
-      const user = await GlobalUtils.checkUserId(req);
+      const user = await db.user.CheckUserId(req);
 
       if (!emails || !Array.isArray(emails) || emails.length === 0)
         throw new ApiError(400, "Missing required fields");
