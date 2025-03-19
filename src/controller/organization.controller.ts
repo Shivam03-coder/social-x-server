@@ -77,109 +77,88 @@ export class OrganizationController {
       const user = await db.user.CheckUserId(req);
       const { emails } = req.body;
       const { orgId } = req.params;
-      if (!emails || !Array.isArray(emails) || emails.length === 0)
-        throw new ApiError(400, "Missing required fields");
-      const isOrg = await db.organization.findFirst({
+
+      if (!emails || !Array.isArray(emails) || emails.length === 0) {
+        throw new ApiError(
+          400,
+          "Emails are required and must be a non-empty array."
+        );
+      }
+
+      const organization = await db.organization.findFirst({
         where: {
           id: orgId,
           adminId: user.id,
         },
       });
-      if (!isOrg) {
-        throw new ApiError(403, "Unauthorized to send invitations");
+
+      if (!organization) {
+        throw new ApiError(
+          403,
+          "Unauthorized to send invitations to this organization."
+        );
       }
 
       try {
         await db.$transaction(async () => {
-          // Find members is alredy in db or not
-
-          const members = await db.user.findMany({
-            where: {
-              email: {
-                in: emails,
-              },
-            },
-          });
-
-          const existingMemberId = members.map((m) => m.id);
-
-          const alredayMemberOfAnyOrganization =
-            await db.organizationMember.findMany({
-              where: {
-                member: {
-                  email: { in: emails },
-                },
-              },
-              select: {
-                member: {
-                  select: {
-                    id: true,
-                    email: true,
-                  },
-                },
-              },
-            });
-
-          const alredayMemberOfAnyOrganizationIds =
-            alredayMemberOfAnyOrganization.map(({ member }) => member.id);
-
-          const alreadyMemberOfAnyOrganizationEmails = new Set(
-            alredayMemberOfAnyOrganization.map(({ member }) => member.email)
-          );
-
-          const alredayMemberOfGivenOrganization =
-            await db.organizationMember.findMany({
+          const [membersOfAnyOrg, membersOfThisOrg] = await Promise.all([
+            db.organizationMember.findMany({
+              where: { member: { email: { in: emails } } },
+              select: { member: { select: { id: true, email: true } } },
+            }),
+            db.organizationMember.findMany({
               where: {
                 organizationId: orgId,
-                member: {
-                  email: { in: emails },
-                },
+                member: { email: { in: emails } },
               },
-              select: {
-                memberId: true,
-              },
+              select: { memberId: true },
+            }),
+          ]);
+
+          const memberIdsOfAnyOrg = new Set(
+            membersOfAnyOrg.map(({ member }) => member.id)
+          );
+          const memberEmailsOfAnyOrg = new Set(
+            membersOfAnyOrg.map(({ member }) => member.email)
+          );
+          const memberIdsOfThisOrg = new Set(
+            membersOfThisOrg.map((m) => m.memberId)
+          );
+
+          const newMemberIdsForThisOrg = Array.from(memberIdsOfAnyOrg).filter(
+            (id) => !memberIdsOfThisOrg.has(id)
+          );
+
+          if (newMemberIdsForThisOrg.length > 0) {
+            const createData = newMemberIdsForThisOrg.map((memberId) => ({
+              organizationId: orgId,
+              memberId,
+            }));
+
+            await db.organizationMember.createMany({
+              data: createData,
             });
-
-          const alredayMemberOfGivenOrganizationIds =
-            alredayMemberOfGivenOrganization.map((M) => M.memberId);
-
-          const newMembersForGivenOrg =
-            alredayMemberOfAnyOrganizationIds.filter(
-              (id) => !alredayMemberOfGivenOrganizationIds.includes(id)
-            );
-
-          if (newMembersForGivenOrg.length > 0) {
-            await Promise.all(
-              newMembersForGivenOrg.map(async (newMember) => {
-                if (newMember) {
-                  await db.organizationMember.create({
-                    data: {
-                      organizationId: orgId,
-                      memberId: newMember,
-                    },
-                  });
-                }
-              })
-            );
           }
 
-          const emailsNotInAnyOrganization =
-            emails.length > 0
-              ? emails.filter(
-                  (email) => !alreadyMemberOfAnyOrganizationEmails.has(email)
-                )
-              : [];
-          if (emailsNotInAnyOrganization.length > 0) {
+          const emailsToInvite = emails.filter(
+            (email) => !memberEmailsOfAnyOrg.has(email)
+          );
+
+          if (emailsToInvite.length > 0) {
             await MailService.sendInviteEmail({
-              emails: emailsNotInAnyOrganization,
+              emails: emailsToInvite,
               invitationType: "ORGANIZATION",
               orgId,
               role: "MEMBER",
             });
-            res.status(200).json(new ApiResponse(200, "C"));
           }
+
+          res.json(new ApiResponse(200, "Invitations sent successfully."));
         });
-      } catch (error) {}
+      } catch (error: any) {
+        console.error("Error sending organization invitations:", error);
+        throw new ApiError(500, "Failed to send invitations.");
+      }
     }
   );
 
