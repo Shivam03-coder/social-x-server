@@ -100,13 +100,13 @@ export class OrganizationController {
       }
 
       try {
-        await db.$transaction(async () => {
+        await db.$transaction(async (tx) => {
           const [membersOfAnyOrg, membersOfThisOrg] = await Promise.all([
-            db.organizationMember.findMany({
+            tx.organizationMember.findMany({
               where: { member: { email: { in: emails } } },
               select: { member: { select: { id: true, email: true } } },
             }),
-            db.organizationMember.findMany({
+            tx.organizationMember.findMany({
               where: {
                 organizationId: orgId,
                 member: { email: { in: emails } },
@@ -135,7 +135,7 @@ export class OrganizationController {
               memberId,
             }));
 
-            await db.organizationMember.createMany({
+            await tx.organizationMember.createMany({
               data: createData,
             });
           }
@@ -164,8 +164,8 @@ export class OrganizationController {
 
   public static AcceptOrgInvitation = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const { orgId, email } = req.params;
-      const Member = await db.user.CheckUserId(req);
+      const { orgId } = req.params;
+      const user = await db.user.CheckUserId(req);
       const organization = await db.organization.findFirst({
         where: { id: orgId },
       });
@@ -173,34 +173,37 @@ export class OrganizationController {
         throw new ApiError(404, "Organization not found.");
       }
 
-      const isMemberOfOrg = await db.organizationMember.findUnique({
-        where: {
-          uniqueOrgMember: {
-            organizationId: orgId,
-            memberId: Member.id,
-          },
-        },
-      });
-      if (isMemberOfOrg) {
-        throw new ApiError(
-          400,
-          "User is already a member of this organization."
-        );
-      }
+      const result = await db.$transaction(async (tx) => {
+        const [joinedMember, _] = await Promise.all([
+          tx.user.update({
+            where: {
+              id: user.id,
+            },
+            data: {
+              role: "MEMBER",
+            },
+            select: {
+              id: true,
+              role: true,
+            },
+          }),
+          tx.organizationMember.create({
+            data: {
+              organizationId: orgId,
+              memberId: user.id,
+            },
+          }),
+        ]);
 
-      await db.organizationMember.create({
-        data: {
-          organizationId: orgId,
-          memberId: Member.id,
-        },
+        return { joinedMember };
       });
 
-      GlobalUtils.setCookie(res, "UserId", Member.id);
-      GlobalUtils.setCookie(res, "UserRole", "MEMBER");
+      GlobalUtils.setCookie(res, "Member", result.joinedMember.id);
+      GlobalUtils.setCookie(res, "UserRole", result.joinedMember.role);
 
       res.status(201).json(
         new ApiResponse(201, "Invitation accepted successfully!", {
-          memberId: Member.id,
+          memberId: result.joinedMember.id,
         })
       );
     }
