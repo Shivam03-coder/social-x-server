@@ -5,7 +5,7 @@ import nodemailer, { Transporter } from "nodemailer";
 class MailService {
   private static transporter: Transporter = nodemailer.createTransport({
     service: "gmail",
-    host: "smtp.gmail.com",
+    host: "smpt.gmail.com",
     port: 587,
     secure: false,
     auth: {

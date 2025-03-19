@@ -45,7 +45,7 @@ model OrganizationMember {
   updatedAt      DateTime     @updatedAt
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  memberId       String
+  memberId       String 
   member         User         @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, memberId], name: "uniqueOrgMember")

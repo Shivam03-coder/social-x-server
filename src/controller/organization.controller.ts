@@ -68,6 +68,8 @@ export class OrganizationController {
         orderBy: { createdAt: "desc" },
       });
 
+      console.log(orgs);
+
       res.status(200).json(new ApiResponse(200, "Organizations fetched", orgs));
     }
   );
@@ -100,34 +102,35 @@ export class OrganizationController {
       }
 
       try {
-        await db.$transaction(async (tx) => {
-          const [membersOfAnyOrg, membersOfThisOrg] = await Promise.all([
-            tx.organizationMember.findMany({
-              where: { member: { email: { in: emails } } },
-              select: { member: { select: { id: true, email: true } } },
-            }),
-            tx.organizationMember.findMany({
-              where: {
-                organizationId: orgId,
-                member: { email: { in: emails } },
-              },
-              select: { memberId: true },
-            }),
-          ]);
+        const { emailsToInvite } = await db.$transaction(async (tx) => {
+          const [existingMemberOfAnyOrg, existingMemberOfThisOrg] =
+            await Promise.all([
+              tx.organizationMember.findMany({
+                where: { member: { email: { in: emails } } },
+                select: { member: { select: { id: true, email: true } } },
+              }),
+              tx.organizationMember.findMany({
+                where: {
+                  organizationId: orgId,
+                  member: { email: { in: emails } },
+                },
+                select: { memberId: true },
+              }),
+            ]);
 
-          const memberIdsOfAnyOrg = new Set(
-            membersOfAnyOrg.map(({ member }) => member.id)
+          const existingUserIdsInAnyOrg = new Set(
+            existingMemberOfAnyOrg.map(({ member }) => member.id)
           );
-          const memberEmailsOfAnyOrg = new Set(
-            membersOfAnyOrg.map(({ member }) => member.email)
+          const existingUserEmailsInAnyOrg = new Set(
+            existingMemberOfAnyOrg.map(({ member }) => member.email)
           );
-          const memberIdsOfThisOrg = new Set(
-            membersOfThisOrg.map((m) => m.memberId)
+          const existingUserIdsInThisOrg = new Set(
+            existingMemberOfThisOrg.map((m) => m.memberId)
           );
 
-          const newMemberIdsForThisOrg = Array.from(memberIdsOfAnyOrg).filter(
-            (id) => !memberIdsOfThisOrg.has(id)
-          );
+          const newMemberIdsForThisOrg = Array.from(
+            existingUserIdsInAnyOrg
+          ).filter((id) => !existingUserIdsInThisOrg.has(id));
 
           if (newMemberIdsForThisOrg.length > 0) {
             const createData = newMemberIdsForThisOrg.map((memberId) => ({
@@ -141,20 +144,21 @@ export class OrganizationController {
           }
 
           const emailsToInvite = emails.filter(
-            (email) => !memberEmailsOfAnyOrg.has(email)
+            (email) => !existingUserEmailsInAnyOrg.has(email)
           );
-
-          if (emailsToInvite.length > 0) {
-            await MailService.sendInviteEmail({
-              emails: emailsToInvite,
-              invitationType: "ORGANIZATION",
-              orgId,
-              role: "MEMBER",
-            });
-          }
-
-          res.json(new ApiResponse(200, "Invitations sent successfully."));
+          return { emailsToInvite };
         });
+        if (emailsToInvite.length > 0) {
+          await MailService.sendInviteEmail({
+            emails: emailsToInvite,
+            invitationType: "ORGANIZATION",
+            orgId,
+            role: "MEMBER",
+          });
+        }
+
+        // 3️⃣ Send the response after everything is done
+        res.json(new ApiResponse(200, "Invitations sent successfully."));
       } catch (error: any) {
         console.error("Error sending organization invitations:", error);
         throw new ApiError(500, "Failed to send invitations.");
@@ -198,7 +202,7 @@ export class OrganizationController {
         return { id: joinedMember.id, role: joinedMember.role };
       });
 
-      GlobalUtils.setCookie(res, "Member", result.id);
+      GlobalUtils.setCookie(res, "UserId", result.id);
       GlobalUtils.setCookie(res, "UserRole", result.role);
 
       res.status(201).json(
