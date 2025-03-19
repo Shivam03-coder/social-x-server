@@ -75,14 +75,10 @@ export class OrganizationController {
   public static SendOrgInvitations = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const user = await db.user.CheckUserId(req);
-      const { emails, role } = req.body;
+      const { emails } = req.body;
       const { orgId } = req.params;
       if (!emails || !Array.isArray(emails) || emails.length === 0)
         throw new ApiError(400, "Missing required fields");
-
-      if (!role || !["MEMBER", "CLIENT"].includes(role))
-        throw new ApiError(400, "Role must be MEMBER or CLIENT.");
-
       const isOrg = await db.organization.findFirst({
         where: {
           id: orgId,
@@ -94,16 +90,96 @@ export class OrganizationController {
       }
 
       try {
-        await MailService.sendInviteEmail({
-          invitationType: "ORGANIZATION",
-          emails,
-          orgId,
-          role,
+        await db.$transaction(async () => {
+          // Find members is alredy in db or not
+
+          const members = await db.user.findMany({
+            where: {
+              email: {
+                in: emails,
+              },
+            },
+          });
+
+          const existingMemberId = members.map((m) => m.id);
+
+          const alredayMemberOfAnyOrganization =
+            await db.organizationMember.findMany({
+              where: {
+                member: {
+                  email: { in: emails },
+                },
+              },
+              select: {
+                member: {
+                  select: {
+                    id: true,
+                    email: true,
+                  },
+                },
+              },
+            });
+
+          const alredayMemberOfAnyOrganizationIds =
+            alredayMemberOfAnyOrganization.map(({ member }) => member.id);
+
+          const alreadyMemberOfAnyOrganizationEmails = new Set(
+            alredayMemberOfAnyOrganization.map(({ member }) => member.email)
+          );
+
+          const alredayMemberOfGivenOrganization =
+            await db.organizationMember.findMany({
+              where: {
+                organizationId: orgId,
+                member: {
+                  email: { in: emails },
+                },
+              },
+              select: {
+                memberId: true,
+              },
+            });
+
+          const alredayMemberOfGivenOrganizationIds =
+            alredayMemberOfGivenOrganization.map((M) => M.memberId);
+
+          const newMembersForGivenOrg =
+            alredayMemberOfAnyOrganizationIds.filter(
+              (id) => !alredayMemberOfGivenOrganizationIds.includes(id)
+            );
+
+          if (newMembersForGivenOrg.length > 0) {
+            await Promise.all(
+              newMembersForGivenOrg.map(async (newMember) => {
+                if (newMember) {
+                  await db.organizationMember.create({
+                    data: {
+                      organizationId: orgId,
+                      memberId: newMember,
+                    },
+                  });
+                }
+              })
+            );
+          }
+
+          const emailsNotInAnyOrganization =
+            emails.length > 0
+              ? emails.filter(
+                  (email) => !alreadyMemberOfAnyOrganizationEmails.has(email)
+                )
+              : [];
+          if (emailsNotInAnyOrganization.length > 0) {
+            await MailService.sendInviteEmail({
+              emails: emailsNotInAnyOrganization,
+              invitationType: "ORGANIZATION",
+              orgId,
+              role: "MEMBER",
+            });
+            res.status(200).json(new ApiResponse(200, "C"));
+          }
         });
-        res.json(new ApiResponse(200, `Invitations sent  successfully`));
-      } catch (error) {
-        throw new ApiError(500, "Failed to send invitations");
-      }
+      } catch (error) {}
     }
   );
 

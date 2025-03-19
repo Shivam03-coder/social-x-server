@@ -20,7 +20,7 @@ export interface SendInviteEmailOptions {
   emails: string[];
   orgId?: string;
   eventId?: string;
-  role?: RoleType;
+  role?: "MEMBER" | "CLIENT";
   invitationType: "ORGANIZATION" | "EVENT";
 }
 
