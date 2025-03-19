@@ -195,15 +195,15 @@ export class OrganizationController {
           }),
         ]);
 
-        return { joinedMember };
+        return { id: joinedMember.id, role: joinedMember.role };
       });
 
-      GlobalUtils.setCookie(res, "Member", result.joinedMember.id);
-      GlobalUtils.setCookie(res, "UserRole", result.joinedMember.role);
+      GlobalUtils.setCookie(res, "Member", result.id);
+      GlobalUtils.setCookie(res, "UserRole", result.role);
 
       res.status(201).json(
         new ApiResponse(201, "Invitation accepted successfully!", {
-          memberId: result.joinedMember.id,
+          memberId: result.id,
         })
       );
     }
