@@ -4,12 +4,12 @@ import { faker } from "@faker-js/faker";
 const prisma = new PrismaClient();
 
 async function main() {
-  const organizationId = "cm8es8cem00000weot9bqjvy8";
+  const organizationId = "cm8eupyi600020w0rzksl77v1";
   const teamAdminId = "user_2uV3DG6M3IuMxjNHM1oLYMKWW4B";
 
   const events = Array.from({ length: 12 }).map(() => ({
-    title: faker.company.name() + " Launch Event",
-    description: faker.lorem.paragraphs(2),
+    title: `${faker.word.words(3)}`,
+    description: faker.word.words(8),
     startTime: faker.date.soon({ days: 30 }),
     endTime: faker.date.soon({ days: 60 }),
   }));
