@@ -8,7 +8,7 @@ import {
 import { Request, Response } from "express";
 import { Webhook } from "svix";
 
-export class ClerkWebhookController {
+export class AuthController {
   public static UserSync = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const SIGNING_SECRET = appEnvConfigs.SIGNING_SECRET;
@@ -55,7 +55,7 @@ export class ClerkWebhookController {
 
       if (eventType === "user.created" || eventType === "user.updated") {
         try {
-          const user = await db.user.create({
+          await db.user.create({
             data: {
               id,
               email,
@@ -78,6 +78,33 @@ export class ClerkWebhookController {
     async (req: Request, res: Response): Promise<void> => {
       const user = await db.user.CheckUserId(req);
       res.json(new ApiResponse(200, "USER FOUND", user));
+    }
+  );
+
+  public static UsersByRole = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      await db.user.CheckUserId(req);
+      const users = await db.user.findMany({
+        where: {
+          role: {
+            in: ["CLIENT", "MEMBER"],
+          },
+        },
+        select: {
+          email: true,
+          role: true,
+        },
+      });
+
+      const groupedMember = users.reduce((acc, user) => {
+        if (!acc[user.role]) {
+          acc[user.role] = [];
+        }
+        acc[user.role].push(user);
+        return acc;
+      }, {} as Record<string, typeof users>);
+
+      res.json(new ApiResponse(200, "USERS BY ROLE", groupedMember));
     }
   );
 }
