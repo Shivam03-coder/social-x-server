@@ -100,9 +100,9 @@ export class AuthController {
         if (!acc[user.role]) {
           acc[user.role] = [];
         }
-        acc[user.role].push(user);
+        acc[user.role].push(user.email);
         return acc;
-      }, {} as Record<string, typeof users>);
+      }, {} as Record<string, string[]>);
 
       res.json(new ApiResponse(200, "USERS BY ROLE", groupedMember));
     }
