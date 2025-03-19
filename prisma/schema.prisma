@@ -80,7 +80,7 @@ model Event {
 
 model EventParticipant {
   id        String          @id @default(cuid())
-  role      ParticipantRole
+  role      ParticipantRole @default(MEMBER)
   eventId   String
   event     Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
   userId    String
@@ -138,12 +138,6 @@ enum PostType {
 
 enum PostScheduleRole {
   ADMIN
-  MEMBER
-}
-
-enum OrgMemberRole {
-  ADMIN
-  CLIENT
   MEMBER
 }
 
