@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { PostController } from "@src/controller/post.controller";
 const postRouter = Router();
-postRouter.route("/:orgId/event/:eventId").post(PostController.GetPosts);
+import { requireAuth } from "@clerk/express";
+postRouter
+  .route("/:orgId/event/:postId")
+  .get(requireAuth(), PostController.GetPostById);
 
 export default postRouter;

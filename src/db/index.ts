@@ -9,7 +9,7 @@ export const db = new PrismaClient().$extends({
     user: {
       async CheckUserId(req: Request) {
         const { userId } = getAuth(req);
-        console.log("🚀 ~ CheckUserId ~ userId:", userId)
+        console.log("🚀 ~ CheckUserId ~ userId:", userId);
         if (!userId) {
           throw new ApiError(401, "Unauthorized");
         }
@@ -30,7 +30,7 @@ export const db = new PrismaClient().$extends({
       },
     },
     organization: {
-      async FindOrgById(id: string) {
+      async CheckByOrgId(id: string) {
         const org = await db.organization.findUnique({
           where: { id },
         });
@@ -61,22 +61,6 @@ export const db = new PrismaClient().$extends({
         }
         return post;
       },
-    },
-  },
-  client: {
-    async CheckOrgEventAndId(orgId: string, eventId: string) {
-      const [organization, event] = await Promise.all([
-        await db.organization.FindOrgById(orgId),
-        await db.event.FindEventById(eventId),
-      ]);
-      if (!organization || !event) {
-        throw new ApiError(404, "Organization or event not found");
-      }
-
-      if (event.organizationId !== orgId) {
-        throw new ApiError(403, "Unauthorized to access this event");
-      }
-      return { organization, event };
     },
   },
 });

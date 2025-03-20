@@ -9,32 +9,40 @@ import {
 import { Request, Response } from "express";
 
 export class PostController {
-  public static GetPosts = AsyncHandler(
-    async (req: Request, res: Response): Promise<void> => {
-      const { eventId, orgId } = req.params;
-      const page = parseInt(req.params.page as string) || 1;
-      const limit = parseInt(req.params.limit as string) || 10;
-      const skip = (page - 1) * limit;
+  public static UpdatePost = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {}
+  );
 
-      const { event } = await db.CheckOrgEventAndId(orgId, eventId);
-      const posts = await db.post.findMany({
+  public static GetPostById = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      await db.user.CheckUserId(req);
+      const { postId, orgId } = req.params;
+      await db.organization.CheckByOrgId(orgId);
+
+      const postInfo = await db.post.findFirst({
         where: {
-          eventId: event.id,
+          id: postId,
+          orgId,
         },
         select: {
           id: true,
-        },
-        skip,
-        take: limit,
-        orderBy: {
-          createdAt: "desc",
+          title: true,
+          hashtags: true,
+          description: true,
+          subtitle: true,
+          additional: true,
+          mediaUrl: true,
+          isPublished: true,
+          confirmByClient: true,
+          postType: true,
+          createdAt: true,
+          updatedAt: true,
         },
       });
-      res.status(200).json(new ApiResponse(200, "Posts fetched", posts));
+      if (!postInfo) {
+        throw new ApiError(404, "Post not found");
+      }
+      res.json(new ApiResponse(200, "Post fetched", postInfo));
     }
-  );
-
-  public static UpdatePost = AsyncHandler(
-    async (req: Request, res: Response): Promise<void> => {}
   );
 }

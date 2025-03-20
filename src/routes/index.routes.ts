@@ -17,4 +17,5 @@ export default [
     path: "posts",
     router: postRouter,
   },
+  
 ];
