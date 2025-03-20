@@ -299,6 +299,7 @@ export class OrganizationController {
               post: {
                 select: {
                   isPublished: true,
+                  id: true,
                 },
               },
             },

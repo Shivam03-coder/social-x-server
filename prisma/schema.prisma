@@ -45,7 +45,7 @@ model OrganizationMember {
   updatedAt      DateTime     @updatedAt
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  memberId       String 
+  memberId       String
   member         User         @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, memberId], name: "uniqueOrgMember")
@@ -71,8 +71,7 @@ model Event {
 
   participants EventParticipant[]
 
-  postId String? @unique
-  post   Post?
+  post Post?
 
   @@unique([organizationId, title])
   @@map("Events")
@@ -107,10 +106,10 @@ model Post {
   updatedAt       DateTime @updatedAt
 
   PostSchedule PostSchedule?
-  orgId        String        @unique
+  orgId        String
   organization Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  eventId      String?       @unique
-  event        Event?        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId      String        @unique
+  event        Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@map("Posts")
 }
