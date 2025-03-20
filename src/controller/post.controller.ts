@@ -34,70 +34,7 @@ export class PostController {
     }
   );
 
-  public static CreatePost = AsyncHandler(
-    async (req: Request, res: Response) => {
-      const { eventId, orgId } = req.params;
-      Promise.all([
-        await db.user.CheckUserId(req),
-        await db.CheckOrgEventAndId(orgId, eventId),
-      ]);
-      const { title, additional, description, hashtags, subtitle } = req.body;
-
-      const mediaUrl = await GlobalUtils.getImageUrl(req);
-
-      if (!title || !hashtags || !description) {
-        throw new ApiError(
-          400,
-          "Title, description, and mediaUrl are required"
-        );
-      }
-      const result = await db.$transaction(async (tx) => {
-        const post = await tx.post.create({
-          data: {
-            title,
-            additional,
-            description,
-            hashtags,
-            eventId,
-            mediaUrl,
-            subtitle,
-            orgId,
-          },
-          select: {
-            id: true,
-            orgId: true,
-            eventId: true,
-            additional: true,
-            postType: true,
-            confirmByClient: true,
-            description: true,
-            hashtags: true,
-            isPublished: true,
-            mediaUrl: true,
-            subtitle: true,
-            title: true,
-          },
-        });
-
-        if (!post) {
-          throw new ApiError(500, "Failed to create post");
-        }
-
-        await tx.event.update({
-          where: {
-            id: post.eventId!,
-          },
-          data: {
-            postId: post.id,
-          },
-        });
-        return post;
-      });
-      res.json(new ApiResponse(201, "Post created", result));
-    }
-  );
-
-  public static EditPostByMember = AsyncHandler(
-    async (req: Request, res: Response) => {}
+  public static UpdatePost = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {}
   );
 }

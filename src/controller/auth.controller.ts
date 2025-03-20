@@ -1,5 +1,6 @@
 import { appEnvConfigs } from "@src/configs";
 import { db } from "@src/db";
+import { GlobalUtils } from "@src/global";
 import {
   ApiError,
   ApiResponse,
@@ -105,6 +106,14 @@ export class AuthController {
       }, {} as Record<string, string[]>);
 
       res.json(new ApiResponse(200, "USERS BY ROLE", groupedMember));
+    }
+  );
+
+  public static GetMediaUrl = AsyncHandler(
+    async (req: Request, res: Response) => {
+      await db.user.CheckUserId(req);
+      const imageUrl = await GlobalUtils.getImageUrl(req);
+      res.json(new ApiResponse(200, "MEDIA URL FOUND", { imageUrl }));
     }
   );
 }

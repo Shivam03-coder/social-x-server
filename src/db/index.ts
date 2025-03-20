@@ -9,6 +9,7 @@ export const db = new PrismaClient().$extends({
     user: {
       async CheckUserId(req: Request) {
         const { userId } = getAuth(req);
+        console.log("🚀 ~ CheckUserId ~ userId:", userId)
         if (!userId) {
           throw new ApiError(401, "Unauthorized");
         }
