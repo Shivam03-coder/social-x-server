@@ -16,7 +16,6 @@ export class OrganizationController {
       if (!name || !slug) {
         throw new ApiError(400, "Missing required fields");
       }
-      console.log(name, slug);
 
       const imageUrl = await GlobalUtils.getImageUrl(req);
       const newOrg = await db.organization.create({

@@ -41,8 +41,7 @@ async function main() {
         mediaUrl: faker.image.urlPicsumPhotos(),
         eventId: createdEvent.id,
         orgId: organizationId,
-        postType: "POST",
-        isPublished: false,
+      
       },
     });
 

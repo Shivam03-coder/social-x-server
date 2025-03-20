@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { appEnvConfigs } from "@src/configs";
-import fs from "fs/promises";
+import axios from "axios";
 
 const Ai = new GoogleGenerativeAI(appEnvConfigs.AI_PUBLISHABLE_KEY as string);
 
@@ -13,23 +13,27 @@ type InstagramPost = {
 };
 
 export const ScanImage = async (
-  file: Express.Multer.File
+  cloudinaryUrl: string,
+  mimeType: string = "image/jpeg"
 ): Promise<InstagramPost | null> => {
-  const filePath = file.path;
-
   try {
-    const fileBuffer = await fs.readFile(filePath);
+    if (!cloudinaryUrl) {
+      console.error("Cloudinary URL is missing.");
+      return null;
+    }
+
+    const response = await axios.get(cloudinaryUrl, {
+      responseType: "arraybuffer",
+    });
+
+    const fileBuffer = Buffer.from(response.data);
 
     if (!fileBuffer || fileBuffer.length === 0) {
-      console.error("File buffer is empty.");
+      console.error("Downloaded file buffer is empty.");
       return null;
     }
-    const base64String = fileBuffer.toString("base64");
 
-    if (!base64String) {
-      console.error("Failed to convert file buffer to base64.");
-      return null;
-    }
+    const base64String = fileBuffer.toString("base64");
 
     const model = Ai.getGenerativeModel({
       model: "gemini-1.5-flash",
@@ -69,7 +73,7 @@ Important Notes:
       {
         inlineData: {
           data: base64String,
-          mimeType: file.mimetype,
+          mimeType: mimeType, // e.g., image/jpeg or image/png
         },
       },
       prompt,
@@ -107,14 +111,5 @@ Important Notes:
   } catch (error) {
     console.error("Failed to scan image:", error);
     return null;
-  } finally {
-    try {
-      await fs.unlink(filePath);
-    } catch (unlinkError) {
-      console.error(
-        `Failed to delete uploaded file at ${filePath}:`,
-        unlinkError
-      );
-    }
   }
 };
