@@ -291,10 +291,26 @@ export class OrganizationController {
               startTime: true,
               endTime: true,
               instagramId: true,
+              teamAdmin: {
+                select: {
+                  firstName: true,
+                },
+              },
+              post: {
+                select: {
+                  isPublished: true,
+                },
+              },
+            },
+            orderBy: {
+              startTime: "asc",
             },
           },
           name: true,
           slug: true,
+        },
+        orderBy: {
+          createdAt: "desc",
         },
       });
       res.json(new ApiResponse(200, "Organizations fetched", getOrgs));
