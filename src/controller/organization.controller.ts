@@ -1,6 +1,7 @@
 import { db } from "@src/db";
 import { GlobalUtils } from "@src/global";
 import MailService from "@src/services/nodemailer";
+import SocketServices from "@src/services/socket.io";
 import {
   ApiError,
   AsyncHandler,
@@ -84,6 +85,9 @@ export class OrganizationController {
         );
       }
 
+      let newMemberIdsForThisOrg: string[] = [];
+      let emailsToInvite: string[] = [];
+
       const organization = await db.organization.findFirst({
         where: {
           id: orgId,
@@ -99,7 +103,7 @@ export class OrganizationController {
       }
 
       try {
-        const { emailsToInvite } = await db.$transaction(async (tx) => {
+        await db.$transaction(async (tx) => {
           const [existingMemberOfAnyOrg, existingMemberOfThisOrg] =
             await Promise.all([
               tx.organizationMember.findMany({
@@ -125,9 +129,9 @@ export class OrganizationController {
             existingMemberOfThisOrg.map((m) => m.memberId)
           );
 
-          const newMemberIdsForThisOrg = Array.from(
-            existingUserIdsInAnyOrg
-          ).filter((id) => !existingUserIdsInThisOrg.has(id));
+          newMemberIdsForThisOrg = Array.from(existingUserIdsInAnyOrg).filter(
+            (id) => !existingUserIdsInThisOrg.has(id)
+          );
 
           if (newMemberIdsForThisOrg.length > 0) {
             const createData = newMemberIdsForThisOrg.map((memberId) => ({
@@ -135,16 +139,22 @@ export class OrganizationController {
               memberId,
             }));
 
-            await tx.organizationMember.createMany({
-              data: createData,
-            });
+            await tx.organizationMember.createMany({ data: createData });
           }
 
-          const emailsToInvite = emails.filter(
+          emailsToInvite = emails.filter(
             (email) => !existingUserEmailsInAnyOrg.has(email)
           );
-          return { emailsToInvite };
         });
+
+        await Promise.all(
+          newMemberIdsForThisOrg.map((userId) =>
+            SocketServices.NotifyUser(userId, {
+              notificationType: "ADDED_TO_NEW_ORGANIZATION",
+              message: `You have been added to the organization ${organization.name}`,
+            })
+          )
+        );
         if (emailsToInvite.length > 0) {
           await MailService.sendInviteEmail({
             emails: emailsToInvite,
@@ -153,8 +163,6 @@ export class OrganizationController {
             role: "MEMBER",
           });
         }
-
-        // 3️⃣ Send the response after everything is done
         res.json(new ApiResponse(200, "Invitations sent successfully."));
       } catch (error: any) {
         console.error("Error sending organization invitations:", error);

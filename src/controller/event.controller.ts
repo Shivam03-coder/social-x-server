@@ -1,6 +1,7 @@
 import { db } from "@src/db";
 import { GlobalUtils } from "@src/global";
 import MailService from "@src/services/nodemailer";
+import SocketServices from "@src/services/socket.io";
 import {
   ApiError,
   ApiResponse,
@@ -96,7 +97,6 @@ export class EventController {
       const { emails, role } = req.body;
       const user = await db.user.CheckUserId(req);
 
-      // Validation
       if (!emails || !Array.isArray(emails) || emails.length === 0)
         throw new ApiError(400, "Missing required fields");
 
@@ -109,12 +109,14 @@ export class EventController {
 
       if (!org) throw new ApiError(403, "Unauthorized to send invitations");
 
-      const isEvent = await db.event.findUnique({
+      const event = await db.event.findUnique({
         where: { id: eventId, organizationId: org.id },
       });
 
-      if (!isEvent)
+      if (!event)
         throw new ApiError(404, "Event not found under this organization.");
+
+      let newMembersIdForThisEvent: string[] = [];
 
       try {
         const transactionResult = await db.$transaction(async (tx) => {
@@ -136,22 +138,23 @@ export class EventController {
           const existingUserEmails = users.map((u) => u.email);
 
           if (role === "MEMBER") {
-            const alreadyMembers = await tx.eventParticipant.findMany({
-              where: {
-                eventId,
-                userId: { in: existingUserId },
-              },
-              select: { userId: true },
-            });
+            const alreadyMembersOfThisEvnet =
+              await tx.eventParticipant.findMany({
+                where: {
+                  eventId,
+                  userId: { in: existingUserId },
+                },
+                select: { userId: true },
+              });
 
-            const alreadyParticipantIds = new Set(
-              alreadyMembers.map((m) => m.userId)
+            const alreadyMembersOfThisEvnetIds = new Set(
+              alreadyMembersOfThisEvnet.map((m) => m.userId)
             );
 
             const newMembers = users.filter(
-              (user) => !alreadyParticipantIds.has(user.id)
+              (user) => !alreadyMembersOfThisEvnetIds.has(user.id)
             );
-
+            newMembersIdForThisEvent = newMembers.map((m) => m.id);
             if (newMembers.length > 0) {
               await Promise.all(
                 newMembers.map((member) =>
@@ -236,6 +239,15 @@ export class EventController {
           // If the role was neither MEMBER nor CLIENT
           return new ApiResponse(400, "Invalid role type specified.");
         });
+
+        await Promise.all(
+          newMembersIdForThisEvent.map((userId) =>
+            SocketServices.NotifyUser(userId, {
+              notificationType: "ADDED_TO_NEW_EVENT",
+              message: `You have been added to the  ${event.title}`,
+            })
+          )
+        );
 
         res.json(
           new ApiResponse(transactionResult.code, transactionResult.message)

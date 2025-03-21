@@ -27,12 +27,13 @@ model User {
 
 model Notification {
   id               String           @id @default(cuid())
-  userId           String
-  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mesaage          String
+  message          String           @default("default message")
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   notificationType NotificationType @default(ADDED_TO_NEW_EVENT)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("Notifications")
 }

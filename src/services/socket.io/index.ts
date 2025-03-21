@@ -1,12 +1,9 @@
+import { db } from "@src/db";
+import { NotificationPayloadType } from "@src/types/types";
 import { Server as HTTPServer } from "http";
 import { Server as SocketIoServer, Socket } from "socket.io";
 
 let io: SocketIoServer;
-
-interface NotificationPayload {
-  title: string;
-  message: string;
-}
 
 class SocketServices {
   public static InitSocketIO = (server: HTTPServer) => {
@@ -31,12 +28,27 @@ class SocketServices {
     });
   };
 
-  public static NotifyUser = (userId: string, payload: NotificationPayload) => {
+  public static NotifyUser = async (
+    userId: string,
+    payload: NotificationPayloadType
+  ) => {
     if (!io) {
       console.error("❌ Socket.io server not initialized!");
       return;
     }
     io.to(userId).emit("notification", payload);
+
+    try {
+      await db.notification.create({
+        data: {
+          userId,
+          message: payload.message,
+          notificationType: payload.notificationType,
+        },
+      });
+    } catch (error) {
+      console.error("�� Failed to create notification:", error);
+    }
   };
 }
 

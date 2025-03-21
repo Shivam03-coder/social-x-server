@@ -31,3 +31,13 @@ export interface UserType  {
   email: string;
   imageUrl: string;
 }
+
+interface NotificationPayloadType {
+  message: string;
+  notificationType:
+    | "ADDED_TO_NEW_ORGANIZATION"
+    | "ADDED_TO_NEW_EVENT"
+    | "PUBLISHED_BY_ADMIN"
+    | "NEW_EVENT_CREATED_BY_ADMIN"
+    | "EVENT_CONFIRM_BY_CLIENT";
+}
