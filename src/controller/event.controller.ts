@@ -259,6 +259,54 @@ export class EventController {
     }
   );
 
+  public static GetEventsbytext = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const user = await db.user.CheckUserId(req);
+      const { text, role } = req.body;
+
+      if (!text) {
+        throw new ApiError(400, "Missing required fields");
+      }
+
+      const events = await db.event.findMany({
+        where: {
+          title: {
+            contains: text,
+          },
+          participants: {
+            some: {
+              userId: user.id,
+              role: role,
+            },
+          },
+        },
+        select: {
+          id: true,
+          title: true,
+          startTime: true,
+          endTime: true,
+          instagramId: true,
+          teamAdmin: {
+            select: {
+              firstName: true,
+            },
+          },
+          post: {
+            select: {
+              isPublished: true,
+              id: true,
+            },
+          },
+        },
+        orderBy: {
+          startTime: "asc",
+        },
+      });
+
+      res.json(new ApiResponse(200, "Events found", events));
+    }
+  );
+
   // public static AcceptEventInvite = AsyncHandler(
   //   async (req: Request, res: Response): Promise<void> => {
   //     const { orgId, eventId, role, email } = req.params;
