@@ -279,6 +279,15 @@ export class OrganizationController {
               memberId: Member.id,
             },
           },
+          events: {
+            some: {
+              participants: {
+                some: {
+                  userId: Member.id,
+                },
+              },
+            },
+          },
         },
         select: {
           id: true,
