@@ -9,7 +9,6 @@ import { clerkMiddleware } from "@clerk/express";
 import { appEnvConfigs } from "./configs";
 import { ApiError } from "./utils/server-functions";
 import routes from "./routes/index.routes";
-
 interface AppOptions {
   port?: number;
 }
