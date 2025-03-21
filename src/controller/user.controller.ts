@@ -107,6 +107,7 @@ export class UserController {
       res.json(new ApiResponse(200, "USERS BY ROLE", groupedMember));
     }
   );
+
   public static Notifications = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const user = await db.user.CheckUserId(req);
