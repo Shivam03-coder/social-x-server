@@ -9,6 +9,7 @@ import { clerkMiddleware } from "@clerk/express";
 import { appEnvConfigs } from "./configs";
 import { ApiError } from "./utils/server-functions";
 import routes from "./routes/index.routes";
+import { initSocketIO } from "./services/socket.io";
 interface AppOptions {
   port?: number;
 }
@@ -39,7 +40,7 @@ class App {
     this.app.use(cookieParser());
 
     // Clerk auth middleware
-    this.app.use(clerkMiddleware());
+    this.app.use("/api/v1", clerkMiddleware());
 
     // CORS
     this.app.use(
@@ -72,7 +73,6 @@ class App {
       }
     });
   }
-
   public listen(): void {
     this.server = this.app.listen(this.port, () => {
       console.log(`🚀 Server running on http://localhost:${this.port}`);

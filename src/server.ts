@@ -19,8 +19,6 @@ const expressApp = appInstance.getAppInstance();
     const server = expressApp.listen(port, () => {
       console.log(`✅ Server started at http://localhost:${port}`);
     });
-
-    // Initialize Socket.io for real-time communication
     initSocketIO(server);
 
     const gracefulShutdown = async (signal: string) => {
