@@ -8,7 +8,7 @@ import {
 import { Request, Response } from "express";
 import { Webhook } from "svix";
 
-export class AuthController {
+export class UserController {
   public static UserSync = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const SIGNING_SECRET = appEnvConfigs.SIGNING_SECRET;
@@ -105,6 +105,25 @@ export class AuthController {
       }, {} as Record<string, string[]>);
 
       res.json(new ApiResponse(200, "USERS BY ROLE", groupedMember));
+    }
+  );
+  public static Notifications = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const user = await db.user.CheckUserId(req);
+      const notifications = await db.notification.findMany({
+        where: {
+          userId: user.id,
+        },
+        select: {
+          message: true,
+          createdAt: true,
+          notificationType: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+      res.json(new ApiResponse(200, "NOTIFICATIONS FOUND", notifications));
     }
   );
 }

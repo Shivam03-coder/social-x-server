@@ -1,10 +1,10 @@
-import authRouter from "./auth.routes";
+import userRouter from "./user.routes";
 import eventRouter from "./event.routes";
 import organizationRouter from "./organization.routes";
 import postRouter from "./post.routes";
 
 export default [
-  { path: "auth", router: authRouter },
+  { path: "user", router: userRouter },
   {
     path: "organization",
     router: organizationRouter,
