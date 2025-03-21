@@ -12,5 +12,6 @@ userRouter.route("/userinfo").get(requireAuth(), UserController.UserInfo);
 userRouter.route("/usersbyrole").get(requireAuth(), UserController.UsersByRole);
 
 userRouter.route("/notifications").get(requireAuth(), UserController.Notifications);
+userRouter.route("/weeklyevents").get(requireAuth(), UserController.EvnetsJoinedWeeklyStats);
 
 export default userRouter;

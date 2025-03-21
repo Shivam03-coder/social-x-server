@@ -7,6 +7,7 @@ import {
 } from "@src/utils/server-functions";
 import { Request, Response } from "express";
 import { Webhook } from "svix";
+import { getWeek } from "date-fns";
 
 export class UserController {
   public static UserSync = AsyncHandler(
@@ -125,6 +126,42 @@ export class UserController {
         },
       });
       res.json(new ApiResponse(200, "NOTIFICATIONS FOUND", notifications));
+    }
+  );
+
+  public static EvnetsJoinedWeeklyStats = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const user = await db.user.CheckUserId(req);
+      const events = await db.event.findMany({
+        where: {
+          participants: {
+            some: {
+              userId: user.id,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+        select: {
+          id: true,
+          createdAt: true,
+        },
+      });
+
+      const groupedByweek = events.reduce((acc, event) => {
+        const date = new Date(event.createdAt);
+        const week = getWeek(date);
+        const weekKey = `week ${week}`;
+        acc[weekKey] = (acc[weekKey] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const result = Object.entries(groupedByweek).map(([week, events]) => ({
+        week,
+        events,
+      }));
+      res.json(new ApiResponse(200, "EVENTS JOINED WEEKLY STATS", result));
     }
   );
 }
