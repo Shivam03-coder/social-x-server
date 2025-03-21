@@ -20,8 +20,21 @@ model User {
   organizationMembers OrganizationMember[]
   eventsAsTeamAdmin   Event[]              @relation("TeamAdminEvents")
   eventParticipations EventParticipant[]
+  Notification        Notification[]
 
   @@map("Users")
+}
+
+model Notification {
+  id               String           @id @default(cuid())
+  userId           String
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mesaage          String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  notificationType NotificationType @default(ADDED_TO_NEW_EVENT)
+
+  @@map("Notifications")
 }
 
 model Organization {
@@ -148,4 +161,12 @@ enum MembershipStatus {
 enum ParticipantRole {
   CLIENT
   MEMBER
+}
+
+enum NotificationType {
+  ADDED_TO_NEW_ORGANIZATION
+  ADDED_TO_NEW_EVENT
+  PUBLISHED_BY_ADMIN
+  NEW_EVENT_CREATED_BY_ADMIN
+  EVENT_CONFIRM_BY_CLIENT
 }

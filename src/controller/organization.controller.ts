@@ -67,9 +67,7 @@ export class OrganizationController {
         orderBy: { createdAt: "desc" },
       });
 
-      console.log(orgs);
-
-      res.status(200).json(new ApiResponse(200, "Organizations fetched", orgs));
+      res.json(new ApiResponse(200, "Organizations fetched", orgs));
     }
   );
 
