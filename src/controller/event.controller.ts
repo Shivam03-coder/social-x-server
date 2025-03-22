@@ -94,9 +94,10 @@ export class EventController {
   public static SendEventInvite = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { orgId, eventId } = req.params;
-      const { emails } = req.body;
-
-      const { role } = req.query as { role?: "MEMBER" | "CLIENT" };
+      const { emails, role } = req.body as {
+        emails: string[];
+        role?: "MEMBER" | "CLIENT";
+      };
 
       if (!emails || !Array.isArray(emails) || emails.length === 0) {
         throw new ApiError(400, "Missing required fields");
@@ -126,6 +127,7 @@ export class EventController {
       }
 
       let newParticipantIdForThisEvent: string[] = [];
+      let responseMessage: string = "";
 
       try {
         const transactionResult = await db.$transaction(async (tx) => {
@@ -174,31 +176,27 @@ export class EventController {
                 )
               );
 
-              return new ApiResponse(
-                200,
-                `${newParticipants.length} members successfully added to the event.`
-              );
+              responseMessage = `${newParticipants.length} members successfully added to the event.`;
             } else {
-              return new ApiResponse(
-                200,
-                "All members are already participating in this event."
-              );
+              responseMessage =
+                "All members are already participating in this event.";
             }
           } else {
-            // No users found: send invite emails
-            await MailService.sendInviteEmail({
-              emails,
-              invitationType: "EVENT",
-              orgId,
-              role,
-            });
-
-            return new ApiResponse(
-              200,
-              `${emails.length} members successfully invited to the event.`
-            );
+            responseMessage = `${emails.length} members successfully invited to the event.`;
           }
+
+          return responseMessage;
         });
+
+        if (newParticipantIdForThisEvent.length === 0) {
+          await MailService.sendInviteEmail({
+            emails,
+            invitationType: "EVENT",
+            orgId,
+            role,
+            eventId,
+          });
+        }
 
         if (newParticipantIdForThisEvent.length > 0) {
           await Promise.all(
@@ -213,7 +211,7 @@ export class EventController {
           );
         }
 
-        res.json(transactionResult);
+        res.json(new ApiResponse(200, transactionResult));
       } catch (error) {
         console.error("SendEventInvite error:", error);
         throw new ApiError(500, "Failed to process event invitation.");
@@ -296,7 +294,7 @@ export class EventController {
       const user = await db.user.CheckUserId(req);
       const { instagramId, instagramIdPassword } = req.body;
 
-      if (instagramId || !instagramIdPassword) {
+      if (!instagramId || !instagramIdPassword) {
         throw new ApiError(400, "Missing required fields");
       }
 
