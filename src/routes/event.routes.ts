@@ -5,15 +5,18 @@ import { requireAuth } from "@clerk/express";
 const eventRouter = Router();
 
 eventRouter
-  .route("/:orgId")
-  .get(requireAuth(), EventController.GetEvents)
-  .post(requireAuth(), EventController.CreateEvent);
+  .route("/bytext")
+  .get(requireAuth(), EventController.GetEventsbytext);
 
 eventRouter
   .route("/:orgId/event/:eventId")
   .post(requireAuth(), EventController.SendEventInvite);
 
-eventRouter.route("/").get(requireAuth(), EventController.GetEventsbytext);
+eventRouter
+  .route("/:orgId")
+  .get(requireAuth(), EventController.GetEvents)
+  .post(requireAuth(), EventController.CreateEvent);
+
 
 // eventRouter
 //   .route("/:orgId/event/:eventId/invite/:role/:email/accept")

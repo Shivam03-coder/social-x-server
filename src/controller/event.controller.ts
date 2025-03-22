@@ -262,23 +262,39 @@ export class EventController {
   public static GetEventsbytext = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const user = await db.user.CheckUserId(req);
-      const { text, role } = req.body;
+      const role = (req.query.role as "MEMBER") || "CLIENT";
+      const text = req.query.text as string;
+      console.log("🚀 ~ EventController ~ text:", text);
+      console.log("🚀 ~ EventController ~ role:", role);
 
-      if (!text) {
-        throw new ApiError(400, "Missing required fields");
+      if (!text || text.trim() === "") {
+        throw new ApiError(400, "Search text is required");
       }
 
       const events = await db.event.findMany({
         where: {
-          title: {
-            contains: text,
-          },
-          participants: {
-            some: {
-              userId: user.id,
-              role: role,
+          OR: [
+            {
+              title: {
+                contains: text,
+                mode: "insensitive",
+              },
             },
-          },
+            {
+              description: {
+                contains: text,
+                mode: "insensitive",
+              },
+            },
+            {
+              teamAdmin: {
+                firstName: {
+                  contains: text,
+                  mode: "insensitive",
+                },
+              },
+            },
+          ],
         },
         select: {
           id: true,
@@ -297,6 +313,12 @@ export class EventController {
               id: true,
             },
           },
+          _count: {
+            select: {
+              participants: true,
+            },
+          },
+          description: true,
         },
         orderBy: {
           startTime: "asc",

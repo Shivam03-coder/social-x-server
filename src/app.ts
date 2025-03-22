@@ -27,21 +27,14 @@ class App {
   }
 
   private initializeMiddlewares(): void {
-    // Basic security and logging middlewares
     this.app.use(helmet());
     this.app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
     this.app.use(morgan("common"));
     this.app.enable("trust proxy");
-
-    // Body parsing and cookie handling~
     this.app.use(express.json());
     this.app.use(bodyParser.urlencoded({ extended: true }));
     this.app.use(cookieParser());
-
-    // Clerk auth middleware
     this.app.use("/api/v1", clerkMiddleware());
-
-    // CORS
     this.app.use(
       cors({
         origin: appEnvConfigs.NEXT_APP_URI || "http://localhost:3000",
