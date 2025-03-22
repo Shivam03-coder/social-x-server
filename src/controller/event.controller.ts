@@ -94,33 +94,42 @@ export class EventController {
   public static SendEventInvite = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { orgId, eventId } = req.params;
-      const { emails, role } = req.body;
-      const user = await db.user.CheckUserId(req);
-
-      if (!emails || !Array.isArray(emails) || emails.length === 0)
+      const { emails } = req.body;
+  
+      const { role } = req.query as { role?: "MEMBER" | "CLIENT" };
+  
+      if (!emails || !Array.isArray(emails) || emails.length === 0) {
         throw new ApiError(400, "Missing required fields");
-
-      if (!role || !["MEMBER", "CLIENT"].includes(role))
+      }
+  
+      if (!role || !["MEMBER", "CLIENT"].includes(role)) {
         throw new ApiError(400, "Role must be MEMBER or CLIENT.");
-
-      const org = await db.organization.findFirst({
-        where: { id: orgId, adminId: user.id },
-      });
-
-      if (!org) throw new ApiError(403, "Unauthorized to send invitations");
-
-      const event = await db.event.findUnique({
-        where: { id: eventId, organizationId: org.id },
-      });
-
-      if (!event)
-        throw new ApiError(404, "Event not found under this organization.");
-
-      let newMembersIdForThisEvent: string[] = [];
-
+      }
+  
+      const user = await db.user.CheckUserId(req);
+  
+      const [org, event] = await Promise.all([
+        db.organization.findFirst({
+          where: { id: orgId, adminId: user.id },
+        }),
+        db.event.findUnique({
+          where: { id: eventId, organizationId: orgId },
+        }),
+      ]);
+  
+      if (!org) {
+        throw new ApiError(403, "Unauthorized to send invitations");
+      }
+  
+      if (!event) {
+        throw new ApiError(404, "Event not found under this organization");
+      }
+  
+      let newParticipantIdForThisEvent: string[] = [];
+  
       try {
         const transactionResult = await db.$transaction(async (tx) => {
-          const users = await tx.user.findMany({
+          const existingUsers = await tx.user.findMany({
             where: {
               email: { in: emails },
             },
@@ -130,47 +139,44 @@ export class EventController {
               role: true,
             },
           });
-
-          if (users.length === 0)
-            return new ApiResponse(404, "No matching users found");
-
-          const existingUserId = users.map((u) => u.id);
-          const existingUserEmails = users.map((u) => u.email);
-
-          if (role === "MEMBER") {
-            const alreadyMembersOfThisEvnet =
-              await tx.eventParticipant.findMany({
-                where: {
-                  eventId,
-                  userId: { in: existingUserId },
-                },
-                select: { userId: true },
-              });
-
-            const alreadyMembersOfThisEvnetIds = new Set(
-              alreadyMembersOfThisEvnet.map((m) => m.userId)
+  
+          if (existingUsers.length > 0) {
+            const existingUserIds = existingUsers.map((u) => u.id);
+  
+            const alreadyParticipants = await tx.eventParticipant.findMany({
+              where: {
+                eventId,
+                userId: { in: existingUserIds },
+              },
+              select: { userId: true },
+            });
+  
+            const alreadyParticipantIds = new Set(
+              alreadyParticipants.map((p) => p.userId)
             );
-
-            const newMembers = users.filter(
-              (user) => !alreadyMembersOfThisEvnetIds.has(user.id)
+  
+            const newParticipants = existingUsers.filter(
+              (u) => !alreadyParticipantIds.has(u.id)
             );
-            newMembersIdForThisEvent = newMembers.map((m) => m.id);
-            if (newMembers.length > 0) {
+  
+            newParticipantIdForThisEvent = newParticipants.map((p) => p.id);
+  
+            if (newParticipants.length > 0) {
               await Promise.all(
-                newMembers.map((member) =>
+                newParticipants.map((participant) =>
                   tx.eventParticipant.create({
                     data: {
-                      role: "MEMBER",
+                      role,
                       eventId,
-                      userId: member.id,
+                      userId: participant.id,
                     },
                   })
                 )
               );
-
+  
               return new ApiResponse(
                 200,
-                `${newMembers.length} members successfully added to the event.`
+                `${newParticipants.length} members successfully added to the event.`
               );
             } else {
               return new ApiResponse(
@@ -178,86 +184,41 @@ export class EventController {
                 "All members are already participating in this event."
               );
             }
-          }
-
-          if (role === "CLIENT") {
-            const participants = await tx.eventParticipant.findMany({
-              where: {
-                eventId,
-                userId: { in: existingUserId },
-              },
+          } else {
+            // No users found: send invite emails
+            await MailService.sendInviteEmail({
+              emails,
+              invitationType: "EVENT",
+              orgId,
+              role,
             });
-
-            const alreadyClientIds = new Set(participants.map((p) => p.userId));
-
-            const newClients = users.filter(
-              (user) => !alreadyClientIds.has(user.id)
-            );
-
-            if (newClients.length > 0) {
-              await Promise.all(
-                newClients.map((client) =>
-                  tx.eventParticipant.create({
-                    data: {
-                      role: "CLIENT",
-                      eventId,
-                      userId: client.id,
-                    },
-                  })
-                )
-              );
-            }
-
-            const nonExistingEmails = emails.filter(
-              (email) => !existingUserEmails.includes(email)
-            );
-
-            if (nonExistingEmails.length > 0) {
-              await MailService.sendInviteEmail({
-                invitationType: "EVENT",
-                emails: nonExistingEmails,
-                eventId,
-                role,
-                orgId,
-              });
-            }
-
+  
             return new ApiResponse(
               200,
-              `Clients processed successfully. ${
-                newClients.length > 0
-                  ? `${newClients.length} clients added. `
-                  : ""
-              }${
-                nonExistingEmails.length > 0
-                  ? `Invitations sent to ${nonExistingEmails.length} new emails.`
-                  : ""
-              }`
+              `${emails.length} members successfully invited to the event.`
             );
           }
-
-          // If the role was neither MEMBER nor CLIENT
-          return new ApiResponse(400, "Invalid role type specified.");
         });
-
-        await Promise.all(
-          newMembersIdForThisEvent.map((userId) =>
-            SocketServices.NotifyUser(userId, {
-              notificationType: "ADDED_TO_NEW_EVENT",
-              message: `You have been added to the  ${event.title}`,
-            })
-          )
-        );
-
-        res.json(
-          new ApiResponse(transactionResult.code, transactionResult.message)
-        );
+  
+        if (newParticipantIdForThisEvent.length > 0) {
+          await Promise.all(
+            newParticipantIdForThisEvent.map((userId) =>
+              SocketServices.NotifyUser(userId, {
+                notificationType: "ADDED_TO_NEW_EVENT",
+                message: `You have been added to the event "${event.title || "Unnamed Event"}"`,
+              })
+            )
+          );
+        }
+  
+        res.json(transactionResult);
       } catch (error) {
         console.error("SendEventInvite error:", error);
         throw new ApiError(500, "Failed to process event invitation.");
       }
     }
   );
+  
 
   public static GetEventsbytext = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
@@ -328,8 +289,6 @@ export class EventController {
       res.json(new ApiResponse(200, "Events found", events));
     }
   );
-
-  // THIS IS ONLY FOR CLIENT CAUSE CLIENT WILL BE ADDED TO EVENTS ONLY NOT  IN ORG NAD BEFORE ACCEPTING INVITE HE IS AUTHENICATED
 
   public static AcceptEventInvite = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
