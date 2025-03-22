@@ -329,103 +329,71 @@ export class EventController {
     }
   );
 
-  // public static AcceptEventInvite = AsyncHandler(
-  //   async (req: Request, res: Response): Promise<void> => {
-  //     const { orgId, eventId, role, email } = req.params;
+  // THIS IS ONLY FOR CLIENT CAUSE CLIENT WILL BE ADDED TO EVENTS ONLY NOT  IN ORG NAD BEFORE ACCEPTING INVITE HE IS AUTHENICATED
 
-  //     const { firstName, lastName, instagramId } = req.body;
+  public static AcceptEventInvite = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { orgId, eventId, role, email } = req.params;
+      const user = await db.user.CheckUserId(req);
+      const { instagramId, instagramIdPassword } = req.body;
 
-  //     if (!firstName || !lastName) {
-  //       throw new ApiError(400, "Missing required fields");
-  //     }
+      if (instagramId || !instagramIdPassword) {
+        throw new ApiError(400, "Missing required fields");
+      }
 
-  //     const normalizedRole = role.toUpperCase();
+      const [org, event] = await Promise.all([
+        db.organization.CheckByOrgId(orgId),
+        db.event.CheckEventById(eventId),
+      ]);
 
-  //     if (!["MEMBER", "CLIENT"].includes(normalizedRole)) {
-  //       throw new ApiError(400, "Role must be MEMBER or CLIENT.");
-  //     }
+      if (!org || !event) {
+        throw new ApiError(404, "Organization and Event not found");
+      }
 
-  //     const userRole = normalizedRole as "MEMBER" | "CLIENT";
+      const results = await db.$transaction(async (tx) => {
+        const client = await tx.user.update({
+          where: {
+            id: user.id,
+          },
+          data: {
+            role: "CLIENT",
+          },
+          select: {
+            id: true,
+            role: true,
+          },
+        });
 
-  //     const org = await db.organization.findFirst({
-  //       where: { id: orgId },
-  //     });
+        // NOW UPADTE EVENT WITH INSTAID AND PASSWORD
+        await tx.event.update({
+          where: {
+            id: eventId,
+          },
+          data: {
+            instagramId,
+            instagramIdPassword,
+          },
+        });
 
-  //     if (!org) {
-  //       throw new ApiError(404, "Organization not found");
-  //     }
+        //  NOW ADD HIM IN EVENT
+        await tx.eventParticipant.create({
+          data: {
+            role: "CLIENT",
+            eventId,
+            userId: user.id,
+          },
+        });
 
-  //     const existingUser = await db.user.findUnique({
-  //       where: { email: email.toLowerCase() },
-  //       select: { id: true, role: true },
-  //     });
+        return {
+          id: client.id,
+          role: client.role,
+        };
+      });
 
-  //     const result = await db.$transaction(async (tx) => {
-  //       let userId: string;
-  //       let savedUserRole: OrgMemberRole;
+      GlobalUtils.setCookie(res, "UserId", results.id);
+      GlobalUtils.setCookie(res, "UserRole", results.role);
 
-  //       if (!existingUser) {
-  //         const newUser = await tx.user.create({
-  //           data: {
-  //             email: email.toLowerCase(),
-  //             firstName,
-  //             lastName,
-  //             role: userRole,
-  //           },
-  //           select: {
-  //             id: true,
-  //             role: true,
-  //           },
-  //         });
-  //         userId = newUser.id;
-  //         savedUserRole = newUser.role;
-  //       } else {
-  //         userId = existingUser.id;
-  //         savedUserRole = existingUser.role;
-  //       }
-
-  //       const alreadyMember = await tx.eventParticipant.findFirst({
-  //         where: {
-  //           eventId,
-  //           userId,
-  //         },
-  //       });
-
-  //       if (alreadyMember) {
-  //         throw new ApiError(400, "User is already a member of this Event.");
-  //       }
-
-  //       await tx.eventParticipant.create({
-  //         data: {
-  //           userId,
-  //           eventId,
-  //           role: userRole,
-  //         },
-  //       });
-
-  //       if (instagramId) {
-  //         await tx.event.update({
-  //           where: { id: eventId },
-  //           data: {
-  //             instagramId,
-  //           },
-  //         });
-  //       }
-
-  //       return {
-  //         id: userId,
-  //         role: userRole === "CLIENT" ? "CLIENT" : "MEMBER",
-  //       };
-  //     });
-
-  //     if (userRole === "CLIENT") {
-  //       GlobalUtils.setCookie(res, "UserId", result.id);
-  //       GlobalUtils.setCookie(res, "UserRole", userRole);
-  //     }
-
-  //     res
-  //       .status(200)
-  //       .json(new ApiResponse(200, "Invite accepted successfully", result));
-  //   }
-  // );
+      res.json(new ApiResponse(200, "Invite accepted successfully"));
+    }
+  );
 }

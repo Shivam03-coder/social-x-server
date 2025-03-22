@@ -40,7 +40,7 @@ export const db = new PrismaClient().$extends({
       },
     },
     event: {
-      async FindEventById(id: string) {
+      async CheckEventById(id: string) {
         const event = await db.event.findUnique({
           where: { id },
         });
