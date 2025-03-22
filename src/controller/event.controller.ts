@@ -95,19 +95,19 @@ export class EventController {
     async (req: Request, res: Response): Promise<void> => {
       const { orgId, eventId } = req.params;
       const { emails } = req.body;
-  
+
       const { role } = req.query as { role?: "MEMBER" | "CLIENT" };
-  
+
       if (!emails || !Array.isArray(emails) || emails.length === 0) {
         throw new ApiError(400, "Missing required fields");
       }
-  
+
       if (!role || !["MEMBER", "CLIENT"].includes(role)) {
         throw new ApiError(400, "Role must be MEMBER or CLIENT.");
       }
-  
+
       const user = await db.user.CheckUserId(req);
-  
+
       const [org, event] = await Promise.all([
         db.organization.findFirst({
           where: { id: orgId, adminId: user.id },
@@ -116,17 +116,17 @@ export class EventController {
           where: { id: eventId, organizationId: orgId },
         }),
       ]);
-  
+
       if (!org) {
         throw new ApiError(403, "Unauthorized to send invitations");
       }
-  
+
       if (!event) {
         throw new ApiError(404, "Event not found under this organization");
       }
-  
+
       let newParticipantIdForThisEvent: string[] = [];
-  
+
       try {
         const transactionResult = await db.$transaction(async (tx) => {
           const existingUsers = await tx.user.findMany({
@@ -139,10 +139,10 @@ export class EventController {
               role: true,
             },
           });
-  
+
           if (existingUsers.length > 0) {
             const existingUserIds = existingUsers.map((u) => u.id);
-  
+
             const alreadyParticipants = await tx.eventParticipant.findMany({
               where: {
                 eventId,
@@ -150,17 +150,17 @@ export class EventController {
               },
               select: { userId: true },
             });
-  
+
             const alreadyParticipantIds = new Set(
               alreadyParticipants.map((p) => p.userId)
             );
-  
+
             const newParticipants = existingUsers.filter(
               (u) => !alreadyParticipantIds.has(u.id)
             );
-  
+
             newParticipantIdForThisEvent = newParticipants.map((p) => p.id);
-  
+
             if (newParticipants.length > 0) {
               await Promise.all(
                 newParticipants.map((participant) =>
@@ -173,7 +173,7 @@ export class EventController {
                   })
                 )
               );
-  
+
               return new ApiResponse(
                 200,
                 `${newParticipants.length} members successfully added to the event.`
@@ -192,25 +192,27 @@ export class EventController {
               orgId,
               role,
             });
-  
+
             return new ApiResponse(
               200,
               `${emails.length} members successfully invited to the event.`
             );
           }
         });
-  
+
         if (newParticipantIdForThisEvent.length > 0) {
           await Promise.all(
             newParticipantIdForThisEvent.map((userId) =>
               SocketServices.NotifyUser(userId, {
                 notificationType: "ADDED_TO_NEW_EVENT",
-                message: `You have been added to the event "${event.title || "Unnamed Event"}"`,
+                message: `You have been added to the event "${
+                  event.title || "Unnamed Event"
+                }"`,
               })
             )
           );
         }
-  
+
         res.json(transactionResult);
       } catch (error) {
         console.error("SendEventInvite error:", error);
@@ -218,15 +220,12 @@ export class EventController {
       }
     }
   );
-  
 
   public static GetEventsbytext = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const user = await db.user.CheckUserId(req);
       const role = (req.query.role as "MEMBER") || "CLIENT";
       const text = req.query.text as string;
-      console.log("🚀 ~ EventController ~ text:", text);
-      console.log("🚀 ~ EventController ~ role:", role);
 
       if (!text || text.trim() === "") {
         throw new ApiError(400, "Search text is required");
@@ -290,9 +289,10 @@ export class EventController {
     }
   );
 
+  // ONLY CLIENT WILL USE IT
   public static AcceptEventInvite = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const { orgId, eventId, role, email } = req.params;
+      const { orgId, eventId } = req.params;
       const user = await db.user.CheckUserId(req);
       const { instagramId, instagramIdPassword } = req.body;
 
