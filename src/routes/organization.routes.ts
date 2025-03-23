@@ -1,5 +1,5 @@
-import { requireAuth } from "@clerk/express";
 import { OrganizationController } from "@src/controller/organization.controller";
+import { requireAuth } from "@src/middleware/auth-middleware";
 import { upload } from "@src/middleware/multer.middleware";
 import { Router } from "express";
 

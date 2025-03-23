@@ -9,6 +9,5 @@ authRouter
   .post(upload.single("profile"), UserAuthController.UserSignup);
 
 authRouter.route("/sign-in").post(UserAuthController.UserSignin);
-authRouter.route("/user-info").get(requireAuth(), UserAuthController.UserInfo);
 
 export default authRouter;

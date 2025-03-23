@@ -1,7 +1,6 @@
 import { db } from "@src/db";
 import { GlobalUtils } from "@src/global";
 import AuthServices from "@src/services/auth";
-import { getAuthUser } from "@src/utils/get-auth-user";
 import {
   ApiError,
   ApiResponse,
@@ -94,13 +93,6 @@ export class UserAuthController {
       ]);
 
       res.status(200).json(new ApiResponse(200, "Login successful"));
-    }
-  );
-
-  public static UserInfo = AsyncHandler(
-    async (req: Request, res: Response): Promise<void> => {
-      const user = getAuthUser(req);
-      res.json(new ApiResponse(200, "USER FOUND", user.role));
     }
   );
 }

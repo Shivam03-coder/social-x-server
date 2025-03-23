@@ -1,6 +1,6 @@
 import { EventController } from "@src/controller/event.controller";
+import { requireAuth } from "@src/middleware/auth-middleware";
 import { Router } from "express";
-import { requireAuth } from "@clerk/express";
 
 const eventRouter = Router();
 
@@ -24,6 +24,5 @@ eventRouter
 eventRouter
   .route("/accept/invite/:orgId/:eventId")
   .post(EventController.AcceptEventInvite);
-
 
 export default eventRouter;

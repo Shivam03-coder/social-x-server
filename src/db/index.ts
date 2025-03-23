@@ -1,5 +1,5 @@
-import { getAuth } from "@clerk/express";
 import { PrismaClient } from "@prisma/client";
+import { getAuthUser } from "@src/utils/get-auth-user";
 import { ApiError } from "@src/utils/server-functions";
 import { Request } from "express";
 
@@ -8,7 +8,7 @@ export const db = new PrismaClient().$extends({
   model: {
     user: {
       async CheckUserId(req: Request) {
-        const { userId } = getAuth(req);
+        const { userId } = getAuthUser(req);
         if (!userId) {
           throw new ApiError(401, "Unauthorized");
         }

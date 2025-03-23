@@ -19,7 +19,7 @@ class AuthServices {
     const signToken = (key: string, expiresIn: string): string =>
       jwt.sign(
         {
-          id: registeredUser.id,
+          userId: registeredUser.id,
           email: registeredUser.email,
           role: registeredUser.role,
         },

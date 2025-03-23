@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { PostController } from "@src/controller/post.controller";
 const postRouter = Router();
-import { requireAuth } from "@clerk/express";
 import { upload } from "@src/middleware/multer.middleware";
+import { requireAuth } from "@src/middleware/auth-middleware";
 postRouter
   .route("/:orgId/event/:postId")
   .post(requireAuth(), PostController.UpdatePost);
