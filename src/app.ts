@@ -9,6 +9,7 @@ import { clerkMiddleware } from "@clerk/express";
 import { appEnvConfigs } from "./configs";
 import { ApiError } from "./utils/server-functions";
 import routes from "./routes/index.routes";
+import { passport } from "@src/configs/jwt";
 interface AppOptions {
   port?: number;
 }
@@ -34,7 +35,7 @@ class App {
     this.app.use(express.json());
     this.app.use(bodyParser.urlencoded({ extended: true }));
     this.app.use(cookieParser());
-    this.app.use("/api/v1", clerkMiddleware());
+    this.app.use(passport.initialize());
     this.app.use(
       cors({
         origin: appEnvConfigs.NEXT_APP_URI || "http://localhost:3000",

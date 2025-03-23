@@ -2,8 +2,16 @@ import { ApiResponse } from "@src/utils/server-functions";
 import { Request } from "express";
 import { Router, RequestHandler } from "express";
 
-namespace $Enums {
-  export type Role = "Admin" | "Member" | "Client";
+declare global {
+  namespace Express {
+    interface User extends JwtPayload {}
+  }
+}
+
+export interface JwtPayload {
+  id: string;
+  role: string;
+  email?: string;
 }
 
 export type UserType = {

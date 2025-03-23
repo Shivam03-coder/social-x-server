@@ -3,9 +3,7 @@ import bodyParser from "body-parser";
 import { Router } from "express";
 const userRouter = Router();
 import { requireAuth } from "@clerk/express";
-userRouter
-  .route("/clerk/webhook")
-  .post(bodyParser.raw({ type: "application/json" }), UserController.UserSync);
+
 
 userRouter.route("/userinfo").get(requireAuth(), UserController.UserInfo);
 

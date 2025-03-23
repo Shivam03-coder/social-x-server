@@ -4,9 +4,9 @@ import bcrypt from "bcrypt";
 import jwt, { Secret, SignOptions } from "jsonwebtoken";
 import { UserType } from "@src/types/types";
 import { ApiError } from "@src/utils/server-functions";
+import passport from "passport";
 
 class AuthServices {
-  // Function to generate access and refresh tokens for a user
   public static generateTokens = (
     registeredUser: UserType
   ): { accessToken: string; refreshToken: string } => {
@@ -30,12 +30,10 @@ class AuthServices {
     };
   };
 
-  // Function to renew JWT tokens using an old refresh token
   public static renewJwtTokens = async (
     oldRefreshToken: string
   ): Promise<{ newAccessToken: string; newRefreshToken: string }> => {
     try {
-      // Find the user associated with the old refresh token
       const authenticatedUser = await db.token.findUnique({
         where: {
           refreshToken: oldRefreshToken,
@@ -145,44 +143,6 @@ class AuthServices {
     const currentTime = Date.now() / 1000;
 
     return decodedToken.exp < currentTime;
-  };
-
-  public static options = {
-    httpOnly: true,
-    secure: true,
-  };
-
-  public static generateOtp = () => {
-    const letters = "123456789";
-    let otp = "";
-    for (let i = 0; i < 4; i++) {
-      otp += letters.charAt(Math.floor(Math.random() * letters.length));
-    }
-    return otp.toString();
-  };
-
-  public SetCookiesInToke = (res: Response) => {
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      maxAge: ms("1d"),
-      domain: ".nxtdev.in",
-    });
-
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: true,
-      maxAge: ms("5d"),
-      domain: ".nxtdev.in",
-    });
-
-    res.cookie("UserRole", user.isAuthenticated, {
-      httpOnly: false,
-      secure: true,
-      maxAge: ms("5d"),
-      domain: ".nxtdev.in",
-    });
   };
 }
 
