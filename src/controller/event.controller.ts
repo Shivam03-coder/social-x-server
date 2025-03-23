@@ -68,11 +68,34 @@ export class EventController {
     }
   );
 
+  public static DeleteEvents = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { orgId, eventId } = req.params;
+      const user = await db.user.CheckUserId(req);
+      const event = await db.event.CheckEventById(eventId);
+      if (event.organizationId !== orgId || event.teamAdminId !== user.id) {
+        throw new ApiError(403, "Unauthorized to delete event");
+      }
+      await db.event.delete({
+        where: { id: eventId },
+      });
+
+      res.status(200).json(new ApiResponse(200, "Event deleted successfully"));
+    }
+  );
+
   public static CreateEvent = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { orgId } = req.params;
       const user = await db.user.CheckUserId(req);
-      const { title, startTime, endTime, description } = req.body;
+      const {
+        additional,
+        description,
+        endTime,
+        organizationId,
+        startTime,
+        title,
+      } = req.body;
       console.log(
         `Creating event for ${startTime} organization ${orgId} by team admin ${user.id}`
       );
@@ -393,7 +416,13 @@ export class EventController {
         throw new ApiError(404, "Participant not joined any event");
       }
 
-      res.json(new ApiResponse(200, "Participant details found", participantJoinedEvent));
+      res.json(
+        new ApiResponse(
+          200,
+          "Participant details found",
+          participantJoinedEvent
+        )
+      );
     }
   );
 }

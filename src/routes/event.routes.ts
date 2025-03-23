@@ -25,4 +25,5 @@ eventRouter
   .route("/accept/invite/:orgId/:eventId")
   .post(EventController.AcceptEventInvite);
 
+eventRouter.route("/delete/:eventId/:orgId").delete(requireAuth(), EventController.DeleteEvents);
 export default eventRouter;

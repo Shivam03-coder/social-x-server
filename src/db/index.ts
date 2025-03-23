@@ -19,7 +19,6 @@ export const db = new PrismaClient().$extends({
             email: true,
             firstName: true,
             lastName: true,
-            imageUrl: true,
             role: true,
           },
         });

@@ -6,12 +6,14 @@ import { Router } from "express";
 const organizationRouter = Router();
 
 organizationRouter
-  .route("/")
+  .route("/create/neworg")
   .post(
     requireAuth(),
     upload.single("orgImage"),
     OrganizationController.CreateOrg
-  )
+  );
+organizationRouter
+  .route("/getorgs")
   .get(requireAuth(), OrganizationController.GetOrgs);
 
 organizationRouter

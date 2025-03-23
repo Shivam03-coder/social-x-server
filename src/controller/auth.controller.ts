@@ -82,7 +82,8 @@ export class UserAuthController {
       GlobalUtils.setMultipleCookies(res, [
         { name: "accessToken", value: accessToken, httpOnly: true },
         { name: "refreshToken", value: refreshToken, httpOnly: true },
-        { name: "userRole", value: registeredUser.role, httpOnly: false },
+        { name: "UserRole", value: registeredUser.role, httpOnly: false },
+        { name: "UserId", value: registeredUser.id, httpOnly: false },
       ]);
 
       res.status(200).json(new ApiResponse(200, "Login successful"));

@@ -31,11 +31,9 @@ export class OrganizationController {
         },
       });
 
-      res.status(201).json(
-        new ApiResponse(201, "Organization created successfully", {
-          orgId: newOrg.id,
-        })
-      );
+      res
+        .status(201)
+        .json(new ApiResponse(201, "Organization created successfully"));
     }
   );
 
