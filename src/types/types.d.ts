@@ -9,7 +9,10 @@ namespace $Enums {
 export type UserType = {
   id: string;
   email: string;
-  password: string;
+  firstName: string | null;
+  lastName: string | null;
+  imageUrl: string | null;
+  role: "ADMIN" | "CLIENT" | "MEMBER";
 };
 
 export interface DecryptedRequest extends Request {
@@ -24,7 +27,7 @@ export interface SendInviteEmailOptions {
   invitationType: "ORGANIZATION" | "EVENT";
 }
 
-export interface UserType  {
+export interface UserType {
   id: string;
   firstName: string;
   lastName: string;
@@ -41,4 +44,3 @@ interface NotificationPayloadType {
     | "NEW_EVENT_CREATED_BY_ADMIN"
     | "EVENT_CONFIRM_BY_CLIENT";
 }
-

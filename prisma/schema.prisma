@@ -8,22 +8,32 @@ datasource db {
 }
 
 model User {
-  id        String     @id @default(cuid())
-  email     String     @unique
-  firstName String?
-  lastName  String?
-  imageUrl  String?
-  role      GlobalRole @default(ADMIN)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  password            String
+  firstName           String?
+  lastName            String?
+  imageUrl            String?
+  role                GlobalRole           @default(ADMIN)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
   organizationMembers OrganizationMember[]
   eventsAsTeamAdmin   Event[]              @relation("TeamAdminEvents")
   eventParticipations EventParticipant[]
   Notification        Notification[]
   Comments            Comment[]
+  Token               Token[]
 
   @@map("Users")
+}
+
+model Token {
+  id           String   @id @default(uuid())
+  userId       String
+  refreshToken String   @unique
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Notification {
