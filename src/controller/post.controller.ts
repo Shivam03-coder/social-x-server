@@ -82,13 +82,11 @@ export class PostController {
   public static GetPostById = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       await db.user.CheckUserId(req);
-      const { postId, orgId } = req.params;
-      await db.organization.CheckByOrgId(orgId);
+      const { postId } = req.params;
 
       const postInfo = await db.post.findFirst({
         where: {
           id: postId,
-          orgId,
         },
         select: {
           id: true,
