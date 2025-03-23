@@ -15,4 +15,17 @@ postRouter
   .route("/post-details/:postId")
   .get(requireAuth(), PostController.GetPostById);
 
+// Confirm post by client
+postRouter
+  .route("/confirm-client/:postId/")
+  .post(PostController.ConfirmPostByClient);
+postRouter
+  .route("/comments/:postId")
+  .post(requireAuth(), PostController.CreateComment)
+  .get(requireAuth(), PostController.GetCommentsByPost);
+
+postRouter
+  .route("/comment/delete/:commentId")
+  .delete(requireAuth(), PostController.DeleteComment);
+
 export default postRouter;

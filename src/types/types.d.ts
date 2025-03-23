@@ -41,3 +41,4 @@ interface NotificationPayloadType {
     | "NEW_EVENT_CREATED_BY_ADMIN"
     | "EVENT_CONFIRM_BY_CLIENT";
 }
+

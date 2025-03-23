@@ -131,4 +131,94 @@ export class PostController {
       res.json(new ApiResponse(200, "MEDIA URL FOUND", { imageUrl }));
     }
   );
+
+  public static ConfirmPostByClient = AsyncHandler(
+    async (req: Request, res: Response) => {
+      await db.user.CheckUserId(req);
+      const { postId } = req.params;
+      await db.post.CheckPostById(postId);
+      const post = await db.post.update({
+        where: { id: postId },
+        data: { confirmByClient: true },
+      });
+      if (post) {
+        res.json(
+          new ApiResponse(200, "Post confirmed by client successfully", post)
+        );
+      } else {
+        throw new ApiError(404, "Post not found");
+      }
+    }
+  );
+
+  public static CreateComment = AsyncHandler(
+    async (req: Request, res: Response) => {
+      const user = await db.user.CheckUserId(req);
+      const { postId } = req.params;
+      const { content } = req.body;
+      await db.post.CheckPostById(postId);
+      const comment = await db.comment.create({
+        data: {
+          content,
+          postId,
+          userId: user.id,
+          commentedBy: user.role,
+        },
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+            },
+          },
+          commentedBy: true,
+        },
+      });
+      res.json(new ApiResponse(200, "Comment created successfully", comment));
+    }
+  );
+
+  public static GetCommentsByPost = AsyncHandler(
+    async (req: Request, res: Response) => {
+      const user = await db.user.CheckUserId(req);
+      const { postId } = req.params;
+      await db.post.CheckPostById(postId);
+      const comment = await db.comment.findMany({
+        where: {
+          postId,
+          userId: user.id,
+        },
+        select: {
+          id: true,
+          content: true,
+          createdAt: true,
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+            },
+          },
+          commentedBy: true,
+        },
+      });
+      res.json(new ApiResponse(200, "Comment Fetched successfully", comment));
+    }
+  );
+
+  public static DeleteComment = AsyncHandler(
+    async (req: Request, res: Response) => {
+      const user = await db.user.CheckUserId(req);
+      const { commentId } = req.params;
+      await db.comment.delete({
+        where: {
+          id: commentId,
+          userId: user.id,
+        },
+      });
+      res.json(new ApiResponse(200, "Comment deleted successfully"));
+    }
+  );
 }

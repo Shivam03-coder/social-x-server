@@ -20,6 +20,7 @@ export const db = new PrismaClient().$extends({
             firstName: true,
             lastName: true,
             imageUrl: true,
+            role: true,
           },
         });
         if (!user) {
@@ -51,7 +52,7 @@ export const db = new PrismaClient().$extends({
       },
     },
     post: {
-      async findPostById(id: string) {
+      async CheckPostById(id: string) {
         const post = await db.post.findUnique({
           where: { id },
         });

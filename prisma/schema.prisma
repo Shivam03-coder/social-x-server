@@ -21,6 +21,7 @@ model User {
   eventsAsTeamAdmin   Event[]              @relation("TeamAdminEvents")
   eventParticipations EventParticipant[]
   Notification        Notification[]
+  Comments            Comment[]
 
   @@map("Users")
 }
@@ -78,7 +79,7 @@ model Event {
   updatedAt           DateTime @updatedAt
 
   teamAdminId String
-  teamAdmin   User   @relation("TeamAdminEvents", fields: [teamAdminId], references: [id])
+  teamAdmin   User   @relation("TeamAdminEvents", fields: [teamAdminId], references: [id], onDelete: Cascade)
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -124,6 +125,7 @@ model Post {
   organization Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
   eventId      String        @unique
   event        Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  Comments     Comment[]
 
   @@map("Posts")
 }
@@ -136,6 +138,20 @@ model PostSchedule {
   postId           String           @unique
   post             Post?            @relation(fields: [postId], references: [id], onDelete: Cascade)
   canBeScheduledBy PostScheduleRole @default(ADMIN)
+}
+
+model Comment {
+  id          String     @id @default(cuid())
+  content     String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  userId      String
+  user        User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId      String
+  post        Post?      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  commentedBy GlobalRole
+
+  @@map("Comments")
 }
 
 enum GlobalRole {
