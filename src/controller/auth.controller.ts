@@ -11,9 +11,7 @@ import { Request, Response } from "express";
 export class UserAuthController {
   public static UserSignup = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const { firstName, lastName, email, password, role } = req.body;
-      const userProfileImage = await GlobalUtils.getImageUrl(req);
-
+      const { firstName, lastName, email, password } = req.body;
       if (!firstName || !lastName || !email || !password) {
         throw new ApiError(400, "All fields are required");
       }
@@ -39,16 +37,11 @@ export class UserAuthController {
           lastName,
           email,
           password: hashedPassword,
-          imageUrl: userProfileImage,
-          role: role || "ADMIN",
         },
         select: {
           id: true,
-          email: true,
           firstName: true,
           lastName: true,
-          imageUrl: true,
-          role: true,
         },
       });
 
