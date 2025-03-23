@@ -35,7 +35,7 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/socket.io": "^3.0.2",
     "axios": "^1.7.9",
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.2",
     "cloudinary": "^2.6.0",
     "concurrently": "^9.1.0",
     "cookie-parser": "^1.4.7",

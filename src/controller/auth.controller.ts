@@ -1,6 +1,7 @@
 import { db } from "@src/db";
 import { GlobalUtils } from "@src/global";
 import AuthServices from "@src/services/auth";
+import { getAuthUser } from "@src/utils/get-auth-user";
 import {
   ApiError,
   ApiResponse,
@@ -9,10 +10,10 @@ import {
 import { Request, Response } from "express";
 
 export class UserAuthController {
-  // SIGN UP
   public static UserSignup = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { firstName, lastName, email, password, role } = req.body;
+      const userProfileImage = await GlobalUtils.getImageUrl(req);
 
       if (!firstName || !lastName || !email || !password) {
         throw new ApiError(400, "All fields are required");
@@ -20,10 +21,6 @@ export class UserAuthController {
 
       if (!AuthServices.isEmailValid(email)) {
         throw new ApiError(400, "Invalid email address");
-      }
-
-      if (AuthServices.isWeakpassword(password)) {
-        throw new ApiError(400, "Password is too weak");
       }
 
       const isEmailAlreadyExist = await db.user.findUnique({
@@ -36,8 +33,6 @@ export class UserAuthController {
       }
 
       const hashedPassword = await AuthServices.hashPassword(password);
-
-      const userProfileImage = await GlobalUtils.getImageUrl(req);
 
       const newUser = await db.user.create({
         data: {
@@ -64,8 +59,7 @@ export class UserAuthController {
     }
   );
 
-  // SIGN IN
-  public static UserLogin = AsyncHandler(
+  public static UserSignin = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { email, password } = req.body;
 
@@ -100,6 +94,13 @@ export class UserAuthController {
       ]);
 
       res.status(200).json(new ApiResponse(200, "Login successful"));
+    }
+  );
+
+  public static UserInfo = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const user = getAuthUser(req);
+      res.json(new ApiResponse(200, "USER FOUND", user.role));
     }
   );
 }

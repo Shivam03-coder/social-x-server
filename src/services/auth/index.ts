@@ -1,10 +1,9 @@
 import { appEnvConfigs } from "@src/configs";
 import { db } from "@src/db";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt, { Secret, SignOptions } from "jsonwebtoken";
 import { UserType } from "@src/types/types";
 import { ApiError } from "@src/utils/server-functions";
-import passport from "passport";
 
 class AuthServices {
   public static generateTokens = (
@@ -19,7 +18,11 @@ class AuthServices {
 
     const signToken = (key: string, expiresIn: string): string =>
       jwt.sign(
-        { _id: registeredUser.id, email: registeredUser.email },
+        {
+          id: registeredUser.id,
+          email: registeredUser.email,
+          role: registeredUser.role,
+        },
         key as Secret,
         { expiresIn } as SignOptions
       );
@@ -89,26 +92,6 @@ class AuthServices {
     } catch (err: any) {
       throw new ApiError(500, err.message || "Unexpected error occurred");
     }
-  };
-
-  public static isWeakpassword = (password: string): boolean => {
-    if (password.length > 8) {
-      return true;
-    }
-    if (!/[A-Z]/.test(password)) {
-      return true;
-    }
-    if (!/[a-z]/.test(password)) {
-      return true;
-    }
-    if (!/\d/.test(password)) {
-      return true;
-    }
-
-    if (!/[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]/.test(password)) {
-      return true;
-    }
-    return false;
   };
 
   public static isEmailValid = (email: string): boolean => {

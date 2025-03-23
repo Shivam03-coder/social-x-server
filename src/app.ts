@@ -5,11 +5,11 @@ import helmet from "helmet";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import { Server } from "http";
-import { clerkMiddleware } from "@clerk/express";
 import { appEnvConfigs } from "./configs";
 import { ApiError } from "./utils/server-functions";
 import routes from "./routes/index.routes";
-import { passport } from "@src/configs/jwt";
+import { passport } from "@src/configs/passport";
+
 interface AppOptions {
   port?: number;
 }
@@ -28,14 +28,6 @@ class App {
   }
 
   private initializeMiddlewares(): void {
-    this.app.use(helmet());
-    this.app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
-    this.app.use(morgan("common"));
-    this.app.enable("trust proxy");
-    this.app.use(express.json());
-    this.app.use(bodyParser.urlencoded({ extended: true }));
-    this.app.use(cookieParser());
-    this.app.use(passport.initialize());
     this.app.use(
       cors({
         origin: appEnvConfigs.NEXT_APP_URI || "http://localhost:3000",
@@ -44,8 +36,14 @@ class App {
         allowedHeaders: ["Content-Type", "Authorization"],
       })
     );
-
-    this.app.options("*", cors());
+    this.app.use(helmet());
+    this.app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
+    this.app.use(morgan("common"));
+    this.app.enable("trust proxy");
+    this.app.use(express.json());
+    this.app.use(bodyParser.urlencoded({ extended: true }));
+    this.app.use(passport.initialize());
+    this.app.use(cookieParser());
   }
   private initializeRoutes(): void {
     routes.forEach((route) => {

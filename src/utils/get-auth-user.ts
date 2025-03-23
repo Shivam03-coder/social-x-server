@@ -1,11 +1,6 @@
-import passport from "passport";
-import { RequestHandler, Request } from "express";
+import { JwtPayload } from "@src/types/types";
 import { ApiError } from "@src/utils/server-functions";
-import { JwtPayload } from "jsonwebtoken";
-
-export const requireAuth = (): RequestHandler => {
-  return passport.authenticate("jwt", { session: false });
-};
+import { Request } from "express";
 
 export const getAuthUser = (req: Request): JwtPayload => {
   const user = req.user as JwtPayload | undefined;
@@ -16,4 +11,3 @@ export const getAuthUser = (req: Request): JwtPayload => {
 
   return user;
 };
-

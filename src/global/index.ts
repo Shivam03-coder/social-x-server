@@ -1,8 +1,6 @@
 import { Request, Response } from "express";
 import { ApiError } from "@src/utils/server-functions";
 import CloudinaryService from "@src/services/cloudinary";
-import bcrypt from "bcrypt";
-import JWT from "jsonwebtoken";
 
 export class GlobalUtils {
   public static getDecryptedData = (decryptedData: any) => {
@@ -40,15 +38,26 @@ export class GlobalUtils {
     });
   };
 
-  public static getImageUrl = async (req: Request) => {
-    let imageUrl: string | null = null;
-    if (req.file && req.file.path) {
-      const uploadedImage = await CloudinaryService.uploadImages(req.file.path);
-      if (!uploadedImage) {
-        throw new ApiError(500, "Image upload failed");
+  public static getImageUrl = async (req: Request): Promise<string | null> => {
+    try {
+      if (req.file?.path) {
+        const uploadedImage = await CloudinaryService.uploadImages(
+          req.file.path
+        );
+
+        if (!uploadedImage) {
+          throw new ApiError(500, "Image upload failed");
+        }
+
+        return uploadedImage as string;
       }
-      return (imageUrl = uploadedImage as string);
+
+      return null;
+    } catch (error: any) {
+      throw new ApiError(
+        500,
+        error.message || "An error occurred while uploading the image"
+      );
     }
-    return imageUrl;
   };
 }

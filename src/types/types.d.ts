@@ -2,11 +2,11 @@ import { ApiResponse } from "@src/utils/server-functions";
 import { Request } from "express";
 import { Router, RequestHandler } from "express";
 
-declare global {
-  namespace Express {
-    interface User extends JwtPayload {}
-  }
-}
+// declare global {
+//   namespace Express {
+//     interface User extends JwtPayload {}
+//   }
+// }
 
 export interface JwtPayload {
   id: string;
