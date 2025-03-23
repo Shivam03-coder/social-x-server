@@ -353,4 +353,47 @@ export class EventController {
       res.json(new ApiResponse(200, "Invite accepted successfully"));
     }
   );
+
+  public static GetEventDetailsbyParticipantId = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const user = await db.user.CheckUserId(req);
+
+      const participantJoinedEvent = await db.event.findMany({
+        where: {
+          participants: {
+            some: {
+              userId: user.id,
+            },
+          },
+        },
+        select: {
+          id: true,
+          title: true,
+          startTime: true,
+          endTime: true,
+          instagramId: true,
+          teamAdmin: {
+            select: {
+              firstName: true,
+            },
+          },
+          post: {
+            select: {
+              isPublished: true,
+              id: true,
+            },
+          },
+        },
+        orderBy: {
+          startTime: "asc",
+        },
+      });
+
+      if (!participantJoinedEvent) {
+        throw new ApiError(404, "Participant not joined any event");
+      }
+
+      res.json(new ApiResponse(200, "Participant details found", participantJoinedEvent));
+    }
+  );
 }

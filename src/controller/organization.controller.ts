@@ -280,11 +280,6 @@ export class OrganizationController {
 
       const getOrgs = await db.organization.findMany({
         where: {
-          members: {
-            some: {
-              memberId: Member.id,
-            },
-          },
           events: {
             some: {
               participants: {

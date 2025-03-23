@@ -9,6 +9,10 @@ eventRouter
   .get(requireAuth(), EventController.GetEventsbytext);
 
 eventRouter
+  .route("/details")
+  .get(requireAuth(), EventController.GetEventDetailsbyParticipantId);
+
+eventRouter
   .route("/send/invite/:orgId/:eventId")
   .post(requireAuth(), EventController.SendEventInvite);
 
@@ -20,5 +24,6 @@ eventRouter
 eventRouter
   .route("/accept/invite/:orgId/:eventId")
   .post(EventController.AcceptEventInvite);
+
 
 export default eventRouter;
