@@ -180,13 +180,23 @@ export class EventController {
       res.json(new ApiResponse(200, "Events found", events));
     }
   );
-  public static GetEventDetailsbyId = AsyncHandler(
+  public static GetEventDetailsById = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const user = await db.user.CheckUserId(req);
       const { eventId } = req.params;
-      const event = await db.event.CheckEventById(eventId);
 
-      const events = await db.event.findFirst({
+      const user = await db.user.CheckUserId(req);
+      if (!user) {
+        res.status(401).json(new ApiResponse(401, "Unauthorized user"));
+        return;
+      }
+
+      const event = await db.event.CheckEventById(eventId);
+      if (!event) {
+        res.status(404).json(new ApiResponse(404, "Event not found"));
+        return;
+      }
+
+      const eventDetails = await db.event.findFirst({
         where: {
           id: eventId,
         },
@@ -216,9 +226,10 @@ export class EventController {
           },
         },
       });
+
       res
         .status(200)
-        .json(new ApiResponse(200, "Event details fetched", events));
+        .json(new ApiResponse(200, "Event details fetched", eventDetails));
     }
   );
 

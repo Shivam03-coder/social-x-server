@@ -9,7 +9,7 @@ eventRouter
   .get(requireAuth(), EventController.GetEventsbytext);
 eventRouter
   .route("/byeventId/:eventId")
-  .get(requireAuth(), EventController.GetEventDetailsbyId);
+  .get(requireAuth(), EventController.GetEventDetailsById);
 
 eventRouter
   .route("/details")
