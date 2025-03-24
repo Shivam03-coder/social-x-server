@@ -41,7 +41,7 @@ export class AdminController {
             role,
           },
         });
-        const participant = await tx.participants.create({
+        const participant = await tx.participant.create({
           data: {
             eventId,
             orgId,
@@ -63,7 +63,7 @@ export class AdminController {
       if (!user) throw new ApiError(404, "User not found");
 
       await db.$transaction(async (tx) => {
-        const participant = await tx.participants.findFirst({
+        const participant = await tx.participant.findFirst({
           where: {
             userId: user.id,
             eventId,
@@ -75,7 +75,7 @@ export class AdminController {
           throw new ApiError(404, "Participant not found");
         }
 
-        await tx.participants.delete({
+        await tx.participant.delete({
           where: {
             id: participant.id,
           },
@@ -102,7 +102,7 @@ export class AdminController {
       });
       if (!user) throw new ApiError(404, "User not found");
 
-      const isParticipant = await db.participants.findFirst({
+      const isParticipant = await db.participant.findFirst({
         where: {
           userId,
           isInviteAccepted: true,
@@ -119,7 +119,7 @@ export class AdminController {
         res.json(new ApiResponse(200, "Invite request sent successfully"));
       }
 
-      const isParticipantInThisEvent = await db.participants.findFirst({
+      const isParticipantInThisEvent = await db.participant.findFirst({
         where: {
           userId,
           eventId,
@@ -132,7 +132,7 @@ export class AdminController {
         throw new ApiError(400, "User is already a participant of this event");
       }
 
-      const addedParticipants = await db.participants.create({
+      const addedParticipants = await db.participant.create({
         data: {
           userId,
           eventId,
@@ -165,7 +165,7 @@ export class AdminController {
       if (!user) throw new ApiError(404, "User not found");
 
       await db.$transaction(async (tx) => {
-        const participant = await tx.participants.findFirst({
+        const participant = await tx.participant.findFirst({
           where: {
             userId: user.id,
             eventId,
@@ -177,7 +177,7 @@ export class AdminController {
           throw new ApiError(404, "Participant not found");
         }
 
-        await tx.participants.update({
+        await tx.participant.update({
           where: {
             id: participant.id,
           },
