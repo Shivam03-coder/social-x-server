@@ -19,7 +19,7 @@ export class OrganizationController {
       }
 
       const imageUrl = await GlobalUtils.getImageUrl(req);
-      const newOrg = await db.organization.create({
+      await db.organization.create({
         data: {
           name,
           slug,
@@ -51,17 +51,6 @@ export class OrganizationController {
           slug: true,
           imageUrl: true,
           createdAt: true,
-          members: {
-            select: {
-              member: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                },
-              },
-            },
-          },
         },
         orderBy: { createdAt: "desc" },
       });
@@ -70,258 +59,74 @@ export class OrganizationController {
     }
   );
 
-  public static SendOrgInvitations = AsyncHandler(
-    async (req: Request, res: Response): Promise<void> => {
-      const user = await db.user.CheckUserId(req);
-      const { emails } = req.body;
-      const { orgId } = req.params;
+  // public static DeleteOrganizationByid = AsyncHandler(
+  //   async (req: Request, res: Response): Promise<void> => {
+  //     const { orgId } = req.params;
+  //     const user = await db.user.CheckUserId(req);
+  //     const org = await db.organization.findFirst({
+  //       where: {
+  //         id: orgId,
+  //         adminId: user.id,
+  //       },
+  //     });
+  //     if (!org) {
+  //       throw new ApiError(404, "Organization not found");
+  //     }
+  //     await db.organization.delete({ where: { id: orgId } });
+  //     res.status(200).json(new ApiResponse(200, "Organization deleted"));
+  //   }
+  // );
 
-      if (!emails || !Array.isArray(emails) || emails.length === 0) {
-        throw new ApiError(
-          400,
-          "Emails are required and must be a non-empty array."
-        );
-      }
+  // public static GetOrganizationByMemberid = AsyncHandler(
+  //   async (req: Request, res: Response): Promise<void> => {
+  //     const Member = await db.user.CheckUserId(req);
 
-      let newMemberIdsForThisOrg: string[] = [];
-      let emailsToInvite: string[] = [];
-
-      const organization = await db.organization.findFirst({
-        where: {
-          id: orgId,
-          adminId: user.id,
-        },
-      });
-
-      if (!organization) {
-        throw new ApiError(
-          403,
-          "Unauthorized to send invitations to this organization."
-        );
-      }
-
-      try {
-        await db.$transaction(async (tx) => {
-          const [existingMemberOfAnyOrg, existingMemberOfThisOrg] =
-            await Promise.all([
-              tx.organizationMember.findMany({
-                where: { member: { email: { in: emails } } },
-                select: { member: { select: { id: true, email: true } } },
-              }),
-              tx.organizationMember.findMany({
-                where: {
-                  organizationId: orgId,
-                  member: { email: { in: emails } },
-                },
-                select: { memberId: true },
-              }),
-            ]);
-
-          const existingUserIdsInAnyOrg = new Set(
-            existingMemberOfAnyOrg.map(({ member }) => member.id)
-          );
-          const existingUserEmailsInAnyOrg = new Set(
-            existingMemberOfAnyOrg.map(({ member }) => member.email)
-          );
-          const existingUserIdsInThisOrg = new Set(
-            existingMemberOfThisOrg.map((m) => m.memberId)
-          );
-
-          newMemberIdsForThisOrg = Array.from(existingUserIdsInAnyOrg).filter(
-            (id) => !existingUserIdsInThisOrg.has(id)
-          );
-
-          if (newMemberIdsForThisOrg.length > 0) {
-            const createData = newMemberIdsForThisOrg.map((memberId) => ({
-              organizationId: orgId,
-              memberId,
-            }));
-
-            await tx.organizationMember.createMany({ data: createData });
-          }
-
-          emailsToInvite = emails.filter(
-            (email) => !existingUserEmailsInAnyOrg.has(email)
-          );
-        });
-
-        await Promise.all(
-          newMemberIdsForThisOrg.map((userId) =>
-            SocketServices.NotifyUser(userId, {
-              notificationType: "ADDED_TO_NEW_ORGANIZATION",
-              message: `You have been added to the organization ${organization.name}`,
-            })
-          )
-        );
-        if (emailsToInvite.length > 0) {
-          await MailService.sendInviteEmail({
-            emails: emailsToInvite,
-            invitationType: "ORGANIZATION",
-            orgId,
-            role: "MEMBER",
-          });
-        }
-        res.json(new ApiResponse(200, "Invitations sent successfully."));
-      } catch (error: any) {
-        console.error("Error sending organization invitations:", error);
-        throw new ApiError(500, "Failed to send invitations.");
-      }
-    }
-  );
-
-  public static AcceptOrgInvitation = AsyncHandler(
-    async (req: Request, res: Response): Promise<void> => {
-      const { orgId } = req.params;
-      const user = await db.user.CheckUserId(req);
-      const organization = await db.organization.findFirst({
-        where: { id: orgId },
-      });
-      if (!organization) {
-        throw new ApiError(404, "Organization not found.");
-      }
-
-      const result = await db.$transaction(async (tx) => {
-        const [joinedMember, _] = await Promise.all([
-          tx.user.update({
-            where: {
-              id: user.id,
-            },
-            data: {
-              role: "MEMBER",
-            },
-            select: {
-              id: true,
-              role: true,
-            },
-          }),
-          tx.organizationMember.create({
-            data: {
-              organizationId: orgId,
-              memberId: user.id,
-            },
-          }),
-        ]);
-
-        return { id: joinedMember.id, role: joinedMember.role };
-      });
-
-      GlobalUtils.setCookie(res, "UserId", result.id);
-      GlobalUtils.setCookie(res, "UserRole", result.role);
-
-      res.status(201).json(
-        new ApiResponse(201, "Invitation accepted successfully!", {
-          memberId: result.id,
-        })
-      );
-    }
-  );
-
-  public static GetOrgMembers = AsyncHandler(
-    async (req: Request, res: Response): Promise<void> => {
-      const { orgId } = req.params;
-      const user = await db.user.CheckUserId(req);
-
-      const org = await db.organization.findFirst({
-        where: {
-          id: orgId,
-          adminId: user.id,
-        },
-      });
-
-      if (!org) {
-        throw new ApiError(404, "Organization not found");
-      }
-
-      const members = await db.organizationMember.findMany({
-        where: {
-          organizationId: org.id,
-        },
-        select: {
-          member: {
-            select: {
-              email: true,
-              firstName: true,
-              lastName: true,
-              role: true,
-            },
-          },
-        },
-      });
-
-      res
-        .status(200)
-        .json(new ApiResponse(200, "Organization members fetched", members));
-    }
-  );
-
-  public static DeleteOrganizationByid = AsyncHandler(
-    async (req: Request, res: Response): Promise<void> => {
-      const { orgId } = req.params;
-      const user = await db.user.CheckUserId(req);
-      const org = await db.organization.findFirst({
-        where: {
-          id: orgId,
-          adminId: user.id,
-        },
-      });
-      if (!org) {
-        throw new ApiError(404, "Organization not found");
-      }
-      await db.organization.delete({ where: { id: orgId } });
-      res.status(200).json(new ApiResponse(200, "Organization deleted"));
-    }
-  );
-
-  public static GetOrganizationByMemberid = AsyncHandler(
-    async (req: Request, res: Response): Promise<void> => {
-      const Member = await db.user.CheckUserId(req);
-
-      const getOrgs = await db.organization.findMany({
-        where: {
-          events: {
-            some: {
-              participants: {
-                some: {
-                  userId: Member.id,
-                },
-              },
-            },
-          },
-        },
-        select: {
-          id: true,
-          imageUrl: true,
-          events: {
-            select: {
-              id: true,
-              title: true,
-              startTime: true,
-              endTime: true,
-              instagramId: true,
-              teamAdmin: {
-                select: {
-                  firstName: true,
-                },
-              },
-              post: {
-                select: {
-                  isPublished: true,
-                  id: true,
-                },
-              },
-            },
-            orderBy: {
-              startTime: "asc",
-            },
-          },
-          name: true,
-          slug: true,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
-      res.json(new ApiResponse(200, "Organizations fetched", getOrgs));
-    }
-  );
+  //     const getOrgs = await db.organization.findMany({
+  //       where: {
+  //         events: {
+  //           some: {
+  //             participants: {
+  //               some: {
+  //                 userId: Member.id,
+  //               },
+  //             },
+  //           },
+  //         },
+  //       },
+  //       select: {
+  //         id: true,
+  //         imageUrl: true,
+  //         events: {
+  //           select: {
+  //             id: true,
+  //             title: true,
+  //             startTime: true,
+  //             endTime: true,
+  //             instagramId: true,
+  //             teamAdmin: {
+  //               select: {
+  //                 firstName: true,
+  //               },
+  //             },
+  //             post: {
+  //               select: {
+  //                 isPublished: true,
+  //                 id: true,
+  //               },
+  //             },
+  //           },
+  //           orderBy: {
+  //             startTime: "asc",
+  //           },
+  //         },
+  //         name: true,
+  //         slug: true,
+  //       },
+  //       orderBy: {
+  //         createdAt: "desc",
+  //       },
+  //     });
+  //     res.json(new ApiResponse(200, "Organizations fetched", getOrgs));
+  //   }
+  // );
 }

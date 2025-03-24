@@ -12,27 +12,9 @@ organizationRouter
     upload.single("orgImage"),
     OrganizationController.CreateOrg
   );
+
 organizationRouter
   .route("/getorgs")
   .get(requireAuth(), OrganizationController.GetOrgs);
-
-organizationRouter
-  .route("/invitations/:orgId")
-  .post(requireAuth(), OrganizationController.SendOrgInvitations);
-
-// NOT A PROTECTED ROUTE
-organizationRouter
-  .route("/invitations/accept/:orgId/:role/:email")
-  .post(requireAuth(), OrganizationController.AcceptOrgInvitation);
-
-// GetOrgMembers
-organizationRouter
-  .route("/member")
-  .get(requireAuth(), OrganizationController.GetOrganizationByMemberid);
-
-// Delete Orgs
-organizationRouter
-  .route("/:orgId")
-  .delete(requireAuth(), OrganizationController.DeleteOrganizationByid);
 
 export default organizationRouter;

@@ -6,11 +6,11 @@ import authRouter from "./auth.routes";
 import adminRouter from "./admin.routes";
 
 export default [
-  // { path: "user", router: userRouter },
-  // {
-  //   path: "organization",
-  //   router: organizationRouter,
-  // },
+  { path: "user", router: userRouter },
+  {
+    path: "organization",
+    router: organizationRouter,
+  },
   // {
   //   path: "events",
   //   router: eventRouter,
@@ -19,10 +19,10 @@ export default [
   //   path: "posts",
   //   router: postRouter,
   // },
-  // {
-  //   path: "auth",
-  //   router: authRouter,
-  // },
+  {
+    path: "auth",
+    router: authRouter,
+  },
   {
     path: "admin",
     router: adminRouter,

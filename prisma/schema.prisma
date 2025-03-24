@@ -17,7 +17,7 @@ model User {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   eventsAsTeamAdmin Event[]        @relation("TeamAdminEvents")
-  Participant       Participants[]
+  participant       Participant[]
   Notification      Notification[]
   Comments          Comment[]
   Token             Token[]
@@ -56,7 +56,7 @@ model Organization {
   updatedAt   DateTime       @updatedAt
   events      Event[]
   Post        Post[]
-  Participant Participants[]
+  participant Participant[]
 
   @@map("Organizations")
 }
@@ -78,7 +78,7 @@ model Event {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  participants Participants[]
+  participants Participant[]
 
   post Post?
 
@@ -86,7 +86,7 @@ model Event {
   @@map("Events")
 }
 
-model Participants {
+model Participant {
   id               String          @id @default(cuid())
   role             ParticipantRole @default(MEMBER)
   createdAt        DateTime        @default(now())
@@ -103,7 +103,7 @@ model Participants {
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
-  @@map("EventParticipants")
+  @@map("Participants")
 }
 
 model Post {
