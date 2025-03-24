@@ -42,6 +42,7 @@ export class UserAuthController {
           id: true,
           firstName: true,
           lastName: true,
+          role: true,
         },
       });
 
