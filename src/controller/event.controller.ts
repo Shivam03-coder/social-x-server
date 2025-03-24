@@ -20,7 +20,6 @@ export class EventController {
         id: true,
         firstName: true,
         lastName: true,
-        imageUrl: true,
       };
       const skip = (page - 1) * limit;
       const events = await db.event.findMany({
@@ -114,134 +113,6 @@ export class EventController {
     }
   );
 
-  public static SendEventInvite = AsyncHandler(
-    async (req: Request, res: Response): Promise<void> => {
-      const { orgId, eventId } = req.params;
-      const { emails, role } = req.body as {
-        emails: string[];
-        role?: "MEMBER" | "CLIENT";
-      };
-
-      if (!emails || !Array.isArray(emails) || emails.length === 0) {
-        throw new ApiError(400, "Missing required fields");
-      }
-
-      if (!role || !["MEMBER", "CLIENT"].includes(role)) {
-        throw new ApiError(400, "Role must be MEMBER or CLIENT.");
-      }
-
-      const user = await db.user.CheckUserId(req);
-
-      const [org, event] = await Promise.all([
-        db.organization.findFirst({
-          where: { id: orgId, adminId: user.id },
-        }),
-        db.event.findUnique({
-          where: { id: eventId, organizationId: orgId },
-        }),
-      ]);
-
-      if (!org) {
-        throw new ApiError(403, "Unauthorized to send invitations");
-      }
-
-      if (!event) {
-        throw new ApiError(404, "Event not found under this organization");
-      }
-
-      let newParticipantIdForThisEvent: string[] = [];
-      let responseMessage: string = "";
-
-      try {
-        const transactionResult = await db.$transaction(async (tx) => {
-          const existingUsers = await tx.user.findMany({
-            where: {
-              email: { in: emails },
-            },
-            select: {
-              id: true,
-              email: true,
-              role: true,
-            },
-          });
-
-          if (existingUsers.length > 0) {
-            const existingUserIds = existingUsers.map((u) => u.id);
-
-            const alreadyParticipants = await tx.eventParticipant.findMany({
-              where: {
-                eventId,
-                userId: { in: existingUserIds },
-              },
-              select: { userId: true },
-            });
-
-            const alreadyParticipantIds = new Set(
-              alreadyParticipants.map((p) => p.userId)
-            );
-
-            const newParticipants = existingUsers.filter(
-              (u) => !alreadyParticipantIds.has(u.id)
-            );
-
-            newParticipantIdForThisEvent = newParticipants.map((p) => p.id);
-
-            if (newParticipants.length > 0) {
-              await Promise.all(
-                newParticipants.map((participant) =>
-                  tx.eventParticipant.create({
-                    data: {
-                      role,
-                      eventId,
-                      userId: participant.id,
-                    },
-                  })
-                )
-              );
-
-              responseMessage = `${newParticipants.length} members successfully added to the event.`;
-            } else {
-              responseMessage =
-                "All members are already participating in this event.";
-            }
-          } else {
-            responseMessage = `${emails.length} members successfully invited to the event.`;
-          }
-
-          return responseMessage;
-        });
-
-        if (newParticipantIdForThisEvent.length === 0) {
-          await MailService.sendInviteEmail({
-            emails,
-            invitationType: "EVENT",
-            orgId,
-            role,
-            eventId,
-          });
-        }
-
-        if (newParticipantIdForThisEvent.length > 0) {
-          await Promise.all(
-            newParticipantIdForThisEvent.map((userId) =>
-              SocketServices.NotifyUser(userId, {
-                notificationType: "ADDED_TO_NEW_EVENT",
-                message: `You have been added to the event "${
-                  event.title || "Unnamed Event"
-                }"`,
-              })
-            )
-          );
-        }
-
-        res.json(new ApiResponse(200, transactionResult));
-      } catch (error) {
-        console.error("SendEventInvite error:", error);
-        throw new ApiError(500, "Failed to process event invitation.");
-      }
-    }
-  );
-
   public static GetEventsbytext = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const user = await db.user.CheckUserId(req);
@@ -309,71 +180,45 @@ export class EventController {
       res.json(new ApiResponse(200, "Events found", events));
     }
   );
-
-  // ONLY CLIENT WILL USE IT
-  public static AcceptEventInvite = AsyncHandler(
+  public static GetEventDetailsbyId = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const { orgId, eventId } = req.params;
       const user = await db.user.CheckUserId(req);
-      const { instagramId, instagramIdPassword } = req.body;
+      const { eventId } = req.params;
+      const event = await db.event.CheckEventById(eventId);
 
-      if (!instagramId || !instagramIdPassword) {
-        throw new ApiError(400, "Missing required fields");
-      }
-
-      const [org, event] = await Promise.all([
-        db.organization.CheckByOrgId(orgId),
-        db.event.CheckEventById(eventId),
-      ]);
-
-      if (!org || !event) {
-        throw new ApiError(404, "Organization and Event not found");
-      }
-
-      const results = await db.$transaction(async (tx) => {
-        const client = await tx.user.update({
-          where: {
-            id: user.id,
+      const events = await db.event.findFirst({
+        where: {
+          id: eventId,
+        },
+        select: {
+          title: true,
+          startTime: true,
+          endTime: true,
+          instagramId: true,
+          instagramIdPassword: true,
+          teamAdmin: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
           },
-          data: {
-            role: "CLIENT",
+          participants: {
+            select: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  role: true,
+                  email: true,
+                },
+              },
+            },
           },
-          select: {
-            id: true,
-            role: true,
-          },
-        });
-
-        // NOW UPADTE EVENT WITH INSTAID AND PASSWORD
-        await tx.event.update({
-          where: {
-            id: eventId,
-          },
-          data: {
-            instagramId,
-            instagramIdPassword,
-          },
-        });
-
-        //  NOW ADD HIM IN EVENT
-        await tx.eventParticipant.create({
-          data: {
-            role: "CLIENT",
-            eventId,
-            userId: user.id,
-          },
-        });
-
-        return {
-          id: client.id,
-          role: client.role,
-        };
+        },
       });
-
-      GlobalUtils.setCookie(res, "UserId", results.id);
-      GlobalUtils.setCookie(res, "UserRole", results.role);
-
-      res.json(new ApiResponse(200, "Invite accepted successfully"));
+      res
+        .status(200)
+        .json(new ApiResponse(200, "Event details fetched", events));
     }
   );
 

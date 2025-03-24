@@ -11,10 +11,10 @@ export default [
     path: "organization",
     router: organizationRouter,
   },
-  // {
-  //   path: "events",
-  //   router: eventRouter,
-  // },
+  {
+    path: "events",
+    router: eventRouter,
+  },
   // {
   //   path: "posts",
   //   router: postRouter,
