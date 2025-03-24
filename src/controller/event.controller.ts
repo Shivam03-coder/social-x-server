@@ -201,7 +201,10 @@ export class EventController {
           id: eventId,
         },
         select: {
+          id: true,
           title: true,
+          description: true,
+          additional: true,
           startTime: true,
           endTime: true,
           instagramId: true,
@@ -210,6 +213,7 @@ export class EventController {
             select: {
               firstName: true,
               lastName: true,
+              email: true,
             },
           },
           participants: {

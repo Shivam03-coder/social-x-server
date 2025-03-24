@@ -13,7 +13,7 @@ export class PostController {
     async (req: Request, res: Response): Promise<void> => {
       await db.user.CheckUserId(req);
 
-      const { postId, orgId } = req.params;
+      const { orgId, eventId } = req.params;
       const { title, subtitle, description, additional, hashtags, mediaUrl } =
         req.body;
 
@@ -25,11 +25,9 @@ export class PostController {
       ].filter((field) => !req.body[field]);
 
       if (missingFields.length > 0) {
-        res.json(
-          new ApiError(
-            400,
-            `Missing required fields: ${missingFields.join(", ")}`
-          )
+        throw new ApiError(
+          400,
+          `Missing required fields: ${missingFields.join(", ")}`
         );
       }
 
@@ -37,20 +35,20 @@ export class PostController {
         const result = await db.$transaction(async (tx) => {
           const event = await tx.event.findFirst({
             where: {
-              post: {
-                id: postId,
-              },
+              id: eventId,
             },
             select: {
-              id: true,
+              post: {
+                select: {
+                  id: true,
+                },
+              },
             },
           });
 
           if (!event) {
             throw new ApiError(404, "Post not found in the event");
           }
-
-          const eventId = event.id;
 
           const payload = {
             title,
@@ -63,18 +61,24 @@ export class PostController {
             eventId,
           };
 
-          await tx.post.upsert({
-            where: { id: postId },
-            update: payload,
-            create: payload,
+          const updatedPost = await tx.post.updateMany({
+            where: {
+              id: event.post?.id,
+            },
+            data: payload,
           });
 
-          return event;
+          if (updatedPost.count === 0) {
+            throw new ApiError(404, "No posts found for this event");
+          }
+
+          return { eventId, updatedPostCount: updatedPost.count };
         });
+
         res.json(new ApiResponse(200, "Post updated successfully", result));
       } catch (error) {
         console.error("Transaction failed:", error);
-        res.json(new ApiError(500, "Post updated  failed"));
+        res.json(new ApiError(500, "Post update failed"));
       }
     }
   );

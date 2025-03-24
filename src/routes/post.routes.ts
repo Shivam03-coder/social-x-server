@@ -4,7 +4,7 @@ const postRouter = Router();
 import { upload } from "@src/middleware/multer.middleware";
 import { requireAuth } from "@src/middleware/auth-middleware";
 postRouter
-  .route("/:orgId/event/:postId")
+  .route("/:orgId/event/:eventId")
   .post(requireAuth(), PostController.UpdatePost);
 
 postRouter
@@ -15,7 +15,6 @@ postRouter
   .route("/post-details/:postId")
   .get(requireAuth(), PostController.GetPostById);
 
-// Confirm post by client
 postRouter
   .route("/confirm-client/:postId/")
   .post(PostController.ConfirmPostByClient);
