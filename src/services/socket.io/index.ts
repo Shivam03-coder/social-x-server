@@ -43,7 +43,6 @@ class SocketServices {
         data: {
           userId,
           message: payload.message,
-          notificationType: payload.notificationType,
         },
       });
     } catch (error) {

@@ -15,35 +15,23 @@ class MailService {
   });
 
   private static generateInviteUrl({
-    email,
     role,
     orgId,
     eventId,
-    invitationType,
   }: {
-    email: string;
     role: string;
     orgId?: string;
     eventId?: string;
-    invitationType: "ORGANIZATION" | "EVENT";
   }): string {
     const baseUrl = "http://localhost:3000/invite";
 
-    if (invitationType === "ORGANIZATION") {
-      return `${baseUrl}/organization/accept?email=${encodeURIComponent(
-        email
-      )}&orgId=${encodeURIComponent(orgId!)}&role=${encodeURIComponent(role)}`;
-    }
+    const queryParams = new URLSearchParams();
 
-    if (invitationType === "EVENT") {
-      return `${baseUrl}/event/accept?email=${encodeURIComponent(
-        email
-      )}&eventId=${encodeURIComponent(eventId!)}&role=${encodeURIComponent(
-        role
-      )}&orgId=${encodeURIComponent(orgId!)}`;
-    }
+    if (orgId) queryParams.append("orgId", orgId);
+    if (eventId) queryParams.append("eventId", eventId);
+    queryParams.append("role", role);
 
-    throw new Error("Invalid invitation type");
+    return `${baseUrl}?${queryParams.toString()}`;
   }
 
   private static getEmailContent(invitationType: "ORGANIZATION" | "EVENT") {
@@ -149,48 +137,39 @@ class MailService {
     `;
   }
 
-  public static async sendInviteEmail(options: SendInviteEmailOptions) {
-    const { emails, orgId, eventId, role = "MEMBER", invitationType } = options;
-
-    if (!emails || emails.length === 0) {
-      throw new Error("No emails provided");
-    }
+  public static async sendInviteEmail(options: {
+    email: string;
+    orgId: string;
+    eventId: string;
+    role?: string;
+  }) {
+    const { email, orgId, eventId, role = "MEMBER" } = options;
 
     try {
-      const { subject, title, description } =
-        this.getEmailContent(invitationType);
+      const subject = "You're invited!";
+      const title = "Join Us";
+      const description =
+        "You've been invited to join our platform. Click below to get started.";
 
-      for (const email of emails) {
-        const inviteUrl = this.generateInviteUrl({
-          email,
-          role,
-          orgId,
-          eventId,
-          invitationType,
-        });
+      const inviteUrl = this.generateInviteUrl({
+        role,
+        orgId,
+        eventId,
+      });
 
-        const mailOptions = {
-          from: `"Social-X" <${appEnvConfigs.AUTH_EMAIL}>`,
-          to: email,
-          subject,
-          html: this.buildEmailTemplate(title, description, inviteUrl),
-        };
+      const mailOptions = {
+        from: `"Social-X" <${appEnvConfigs.AUTH_EMAIL}>`,
+        to: email,
+        subject,
+        html: this.buildEmailTemplate(title, description, inviteUrl),
+      };
 
-        const info = await this.transporter.sendMail(mailOptions);
-        console.log(
-          `✅ ${invitationType} invitation email sent to ${email}: ${info.messageId}`
-        );
-      }
+      const info = await this.transporter.sendMail(mailOptions);
 
-      console.log(
-        `✅ All ${invitationType} invitation emails sent successfully!`
-      );
+      console.log(`✅ Invitation email sent to ${email}: ${info.messageId}`);
     } catch (error) {
-      console.error(
-        `❌ Error sending ${invitationType} invitation emails:`,
-        error
-      );
-      throw new Error(`Failed to send ${invitationType} invitation emails`);
+      console.error(`❌ Error sending invitation email to ${email}:`, error);
+      throw new Error(`Failed to send invitation email to ${email}`);
     }
   }
 }

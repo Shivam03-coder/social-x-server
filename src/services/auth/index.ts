@@ -48,7 +48,6 @@ class AuthServices {
               email: true,
               firstName: true,
               lastName: true,
-              imageUrl: true,
               role: true,
             },
           },

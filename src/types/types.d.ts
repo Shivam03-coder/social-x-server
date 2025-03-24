@@ -19,7 +19,6 @@ export type UserType = {
   email: string;
   firstName: string | null;
   lastName: string | null;
-  imageUrl: string | null;
   role: "ADMIN" | "CLIENT" | "MEMBER";
 };
 
@@ -45,10 +44,4 @@ export interface UserType {
 
 interface NotificationPayloadType {
   message: string;
-  notificationType:
-    | "ADDED_TO_NEW_ORGANIZATION"
-    | "ADDED_TO_NEW_EVENT"
-    | "PUBLISHED_BY_ADMIN"
-    | "NEW_EVENT_CREATED_BY_ADMIN"
-    | "EVENT_CONFIRM_BY_CLIENT";
 }

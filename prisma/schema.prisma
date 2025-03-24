@@ -8,21 +8,19 @@ datasource db {
 }
 
 model User {
-  id                  String               @id @default(cuid())
-  email               String               @unique
-  password            String
-  firstName           String?
-  lastName            String?
-  imageUrl            String?
-  role                GlobalRole           @default(ADMIN)
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  organizationMembers OrganizationMember[]
-  eventsAsTeamAdmin   Event[]              @relation("TeamAdminEvents")
-  eventParticipations EventParticipant[]
-  Notification        Notification[]
-  Comments            Comment[]
-  Token               Token[]
+  id                String         @id @default(cuid())
+  email             String         @unique
+  password          String
+  firstName         String?
+  lastName          String?
+  role              GlobalRole     @default(ADMIN)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  eventsAsTeamAdmin Event[]        @relation("TeamAdminEvents")
+  Participant       Participants[]
+  Notification      Notification[]
+  Comments          Comment[]
+  Token             Token[]
 
   @@map("Users")
 }
@@ -37,11 +35,10 @@ model Token {
 }
 
 model Notification {
-  id               String           @id @default(cuid())
-  message          String           @default("default message")
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  notificationType NotificationType @default(ADDED_TO_NEW_EVENT)
+  id        String   @id @default(cuid())
+  message   String   @default("default message")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -50,31 +47,18 @@ model Notification {
 }
 
 model Organization {
-  id        String               @id @default(cuid())
-  name      String
-  slug      String               @unique
-  adminId   String
-  imageUrl  String?
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
-  members   OrganizationMember[]
-  events    Event[]
-  Post      Post[]
+  id          String         @id @default(cuid())
+  name        String
+  slug        String         @unique
+  adminId     String
+  imageUrl    String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  events      Event[]
+  Post        Post[]
+  Participant Participants[]
 
   @@map("Organizations")
-}
-
-model OrganizationMember {
-  id             String       @id @default(cuid())
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  memberId       String
-  member         User         @relation(fields: [memberId], references: [id], onDelete: Cascade)
-
-  @@unique([organizationId, memberId], name: "uniqueOrgMember")
-  @@map("OrganizationMembers")
 }
 
 model Event {
@@ -94,7 +78,7 @@ model Event {
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  participants EventParticipant[]
+  participants Participants[]
 
   post Post?
 
@@ -102,15 +86,21 @@ model Event {
   @@map("Events")
 }
 
-model EventParticipant {
-  id        String          @id @default(cuid())
-  role      ParticipantRole @default(MEMBER)
-  eventId   String
-  event     Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+model Participants {
+  id               String          @id @default(cuid())
+  role             ParticipantRole @default(MEMBER)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  isInviteAccepted Boolean         @default(false)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  orgId        String
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, userId])
   @@map("EventParticipants")
@@ -188,12 +178,4 @@ enum MembershipStatus {
 enum ParticipantRole {
   CLIENT
   MEMBER
-}
-
-enum NotificationType {
-  ADDED_TO_NEW_ORGANIZATION
-  ADDED_TO_NEW_EVENT
-  PUBLISHED_BY_ADMIN
-  NEW_EVENT_CREATED_BY_ADMIN
-  EVENT_CONFIRM_BY_CLIENT
 }

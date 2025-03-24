@@ -89,4 +89,37 @@ export class UserAuthController {
       res.status(200).json(new ApiResponse(200, "Login successful"));
     }
   );
+
+  public static ChangePassword = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { email, oldPassWord, newPassWord, role } = req.body;
+      if (!email || !oldPassWord || !newPassWord) {
+        throw new ApiError(400, "All fields are required");
+      }
+
+      const user = await db.user.findUnique({
+        where: {
+          email,
+        },
+      });
+      if (!user) {
+        throw new ApiError(404, "User not found");
+      }
+
+      const password = await AuthServices.verifyPassword(
+        user.password,
+        oldPassWord
+      );
+      if (!password) {
+        throw new ApiError(401, "Incorrect password");
+      }
+      const hashedPassword = await AuthServices.hashPassword(newPassWord);
+      await db.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword },
+      });
+
+      res.json(new ApiResponse(200, "Password changed successfully"));
+    }
+  );
 }
