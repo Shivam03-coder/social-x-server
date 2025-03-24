@@ -42,7 +42,6 @@ class App {
     this.app.enable("trust proxy");
     this.app.use(express.json());
     this.app.use(bodyParser.urlencoded({ extended: true }));
-    this.app.use(passport.initialize());
     this.app.use(cookieParser());
   }
   private initializeRoutes(): void {

@@ -28,17 +28,6 @@ export const db = new PrismaClient().$extends({
         return user;
       },
     },
-    organization: {
-      async CheckByOrgId(id: string) {
-        const org = await db.organization.findUnique({
-          where: { id },
-        });
-        if (!org) {
-          throw new ApiError(404, "Organization not found");
-        }
-        return org;
-      },
-    },
     event: {
       async CheckEventById(id: string) {
         const event = await db.event.findUnique({

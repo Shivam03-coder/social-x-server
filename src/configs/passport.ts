@@ -4,13 +4,13 @@ import { appEnvConfigs } from "@src/configs";
 import { db } from "@src/db";
 import { JwtPayload } from "@src/types/types";
 
-if (!appEnvConfigs.ACCESS_TOKEN_SECRET_KEY) {
+if (!appEnvConfigs.SESSION_TOKEN_KEY) {
   throw new Error("ACCESS_TOKEN_SECRET_KEY is not defined in environment");
 }
 
 const opts = {
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: appEnvConfigs.ACCESS_TOKEN_SECRET_KEY,
+  secretOrKey: appEnvConfigs.SESSION_TOKEN_KEY,
 };
 
 passport.use(
@@ -20,7 +20,6 @@ passport.use(
         where: { id: jwtPayload.userId },
         select: {
           id: true,
-          email: true,
           role: true,
         },
       });
@@ -32,7 +31,6 @@ passport.use(
       return done(null, {
         userId: user.id,
         role: user.role,
-        email: user.email,
       });
     } catch (error) {
       console.error("Error in Passport JWT Strategy:", error);

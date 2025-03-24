@@ -2,25 +2,23 @@ import { ApiResponse } from "@src/utils/server-functions";
 import { Request } from "express";
 import { Router, RequestHandler } from "express";
 
-// declare global {
-//   namespace Express {
-//     interface User extends JwtPayload {}
-//   }
-// }
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User;
+    }
+  }
+}
 
 export interface JwtPayload {
   userId: string;
   role: string;
-  email?: string;
 }
 
-export type UserType = {
+export interface User {
   id: string;
-  email: string;
-  firstName: string | null;
-  lastName: string | null;
   role: "ADMIN" | "CLIENT" | "MEMBER";
-};
+}
 
 export interface DecryptedRequest extends Request {
   decryptedData?: any;
@@ -36,10 +34,8 @@ export interface SendInviteEmailOptions {
 
 export interface UserType {
   id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  imageUrl: string;
+  password: string;
+  role: "ADMIN" | "CLIENT" | "MEMBER";
 }
 
 interface NotificationPayloadType {

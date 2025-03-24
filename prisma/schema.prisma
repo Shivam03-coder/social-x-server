@@ -8,30 +8,32 @@ datasource db {
 }
 
 model User {
-  id                String         @id @default(cuid())
-  email             String         @unique
-  password          String
-  firstName         String?
-  lastName          String?
-  role              GlobalRole     @default(ADMIN)
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  eventsAsTeamAdmin Event[]        @relation("TeamAdminEvents")
-  participant       Participant[]
-  Notification      Notification[]
-  Comments          Comment[]
-  Token             Token[]
+  id            String         @id @default(cuid())
+  email         String         @unique
+  password      String
+  firstName     String?
+  lastName      String?
+  role          GlobalRole     @default(ADMIN)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  memberships   Member[]
+  notifications Notification[]
+  comments      Comment[]
+  session       Session?
+  Event         Event[]
 
   @@map("Users")
 }
 
-model Token {
-  id           String   @id @default(uuid())
-  userId       String
-  refreshToken String   @unique
-  createdAt    DateTime @default(now())
-  expiresAt    DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Session {
+  id         String   @id @default(uuid())
+  sessionKey String   @unique
+  expiresAt  DateTime
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
 }
 
 model Notification {
@@ -46,64 +48,56 @@ model Notification {
   @@map("Notifications")
 }
 
-model Organization {
-  id          String         @id @default(cuid())
-  name        String
-  slug        String         @unique
-  adminId     String
-  imageUrl    String?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  events      Event[]
-  Post        Post[]
-  participant Participant[]
+model Client {
+  id                String   @id @default(cuid())
+  name              String
+  email             String   @unique
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  isVerified        Boolean  @default(false)
+  events            Event[]
+  instagramId       String?
+  instagramPassword String?
 
-  @@map("Organizations")
+  @@map("Clients")
 }
 
 model Event {
-  id                  String   @id @default(cuid())
-  title               String
-  description         String?
-  additional          String?
-  startTime           DateTime
-  endTime             DateTime
-  instagramId         String?
-  instagramIdPassword String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  teamAdminId         String
-  teamAdmin           User     @relation("TeamAdminEvents", fields: [teamAdminId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  title       String   @unique
+  description String?
+  additional  String?
+  startTime   DateTime
+  endTime     DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
-  participants Participant[]
+  participants Member[]
 
-  post Post?
+  post   Post?
+  User   User?   @relation(fields: [userId], references: [id])
+  userId String?
 
-  @@unique([organizationId, title])
   @@map("Events")
 }
 
-model Participant {
-  id               String          @id @default(cuid())
-  role             ParticipantRole @default(MEMBER)
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-  isInviteAccepted Boolean         @default(false)
+model Member {
+  id               String     @id @default(cuid())
+  role             MemberRole @default(MEMBER)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  isInviteAccepted Boolean    @default(false)
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  eventId String
-  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId String?
+  event   Event?  @relation(fields: [eventId], references: [id], onDelete: Cascade) // ✅ Member belongs to an Event
 
-  orgId        String
-  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-
-  @@unique([eventId, userId])
-  @@map("Participants")
+  @@map("Members")
 }
 
 model Post {
@@ -120,12 +114,11 @@ model Post {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  eventId String @unique
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  comments     Comment[]
   PostSchedule PostSchedule?
-  orgId        String
-  organization Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  eventId      String        @unique
-  event        Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  Comments     Comment[]
 
   @@map("Posts")
 }
@@ -175,7 +168,6 @@ enum MembershipStatus {
   ACCEPTED
 }
 
-enum ParticipantRole {
-  CLIENT
+enum MemberRole {
   MEMBER
 }

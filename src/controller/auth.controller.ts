@@ -1,6 +1,7 @@
 import { db } from "@src/db";
 import { GlobalUtils } from "@src/global";
 import AuthServices from "@src/services/auth";
+import { getAuthUser } from "@src/utils/get-auth-user";
 import {
   ApiError,
   ApiResponse,
@@ -60,34 +61,39 @@ export class UserAuthController {
         throw new ApiError(400, "Email and password are required");
       }
 
-      const registeredUser = await db.user.findFirst({
+      const user = await db.user.findFirst({
         where: { email },
+        select: {
+          id: true,
+          role: true,
+          password: true,
+        },
       });
 
-      if (!registeredUser) {
+      if (!user) {
         throw new ApiError(404, "User not found");
       }
 
       const isPasswordCorrect = await AuthServices.verifyPassword(
         password,
-        registeredUser.password
+        user.password
       );
 
       if (!isPasswordCorrect) {
         throw new ApiError(401, "Incorrect password");
       }
 
-      const { accessToken, refreshToken } =
-        AuthServices.generateTokens(registeredUser);
+      const { sessionToken } = await AuthServices.generateTokens(user);
 
       GlobalUtils.setMultipleCookies(res, [
-        { name: "accessToken", value: accessToken, httpOnly: true },
-        { name: "refreshToken", value: refreshToken, httpOnly: true },
-        { name: "UserRole", value: registeredUser.role, httpOnly: false },
-        { name: "UserId", value: registeredUser.id, httpOnly: false },
+        { name: "sessionToken", value: sessionToken },
+        { name: "UserRole", value: user.role },
+        { name: "UserId", value: user.id },
       ]);
 
-      res.status(200).json(new ApiResponse(200, "Login successful"));
+      res
+        .status(200)
+        .json(new ApiResponse(200, "UYou have beeb loged in  successfully"));
     }
   );
 
@@ -121,6 +127,14 @@ export class UserAuthController {
       });
 
       res.json(new ApiResponse(200, "Password changed successfully"));
+    }
+  );
+
+  public static GetUserInfo = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const user = getAuthUser(req);
+      console.log("🚀 ~ UserAuthController ~ user:", user);
+      res.json(new ApiResponse(200, "User info fetched successfully", user));
     }
   );
 }

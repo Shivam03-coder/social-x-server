@@ -1,98 +1,16 @@
 import { appEnvConfigs } from "@src/configs";
 import { db } from "@src/db";
 import bcrypt from "bcryptjs";
-import jwt, { Secret, SignOptions } from "jsonwebtoken";
 import { UserType } from "@src/types/types";
 import { ApiError } from "@src/utils/server-functions";
+import crypto from "crypto";
+
+export interface SessionUser {
+  id: string;
+  role: "ADMIN" | "CLIENT" | "MEMBER";
+}
 
 class AuthServices {
-  public static generateTokens = (
-    registeredUser: UserType
-  ): { accessToken: string; refreshToken: string } => {
-    const accessTokenSecret = appEnvConfigs.ACCESS_TOKEN_SECRET_KEY;
-    const refreshTokenSecret = appEnvConfigs.REFRESH_TOKEN_SECRET_KEY;
-
-    if (!accessTokenSecret || !refreshTokenSecret) {
-      throw new ApiError(409, "Token signing keys are not properly configured");
-    }
-
-    const signToken = (key: string, expiresIn: string): string =>
-      jwt.sign(
-        {
-          userId: registeredUser.id,
-          email: registeredUser.email,
-          role: registeredUser.role,
-        },
-        key as Secret,
-        { expiresIn } as SignOptions
-      );
-
-    return {
-      accessToken: signToken(accessTokenSecret, "4d"),
-      refreshToken: signToken(refreshTokenSecret, "12d"),
-    };
-  };
-
-  public static renewJwtTokens = async (
-    oldRefreshToken: string
-  ): Promise<{ newAccessToken: string; newRefreshToken: string }> => {
-    try {
-      const authenticatedUser = await db.token.findUnique({
-        where: {
-          refreshToken: oldRefreshToken,
-        },
-        select: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              firstName: true,
-              lastName: true,
-              role: true,
-            },
-          },
-        },
-      });
-
-      if (!authenticatedUser) {
-        throw new ApiError(409, "Please login again");
-      }
-
-      const refreshTokenSecret = appEnvConfigs.REFRESH_TOKEN_SECRET_KEY;
-
-      if (!refreshTokenSecret) {
-        throw new ApiError(500, "Refresh token secret key is missing");
-      }
-
-      // Verify the old refresh token
-      try {
-        jwt.verify(oldRefreshToken, refreshTokenSecret);
-      } catch (err) {
-        throw new ApiError(409, "Invalid refresh token, please login again");
-      }
-
-      const { user } = authenticatedUser;
-
-      if (!user) {
-        throw new ApiError(404, "User not found");
-      }
-
-      // Generate new tokens
-      const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
-        AuthServices.generateTokens(user);
-
-      // Update the refresh token in the database
-      await db.token.update({
-        where: { refreshToken: oldRefreshToken },
-        data: { refreshToken: newRefreshToken },
-      });
-
-      return { newAccessToken, newRefreshToken };
-    } catch (err: any) {
-      throw new ApiError(500, err.message || "Unexpected error occurred");
-    }
-  };
-
   public static isEmailValid = (email: string): boolean => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return regex.test(email);
@@ -111,20 +29,71 @@ class AuthServices {
     return await bcrypt.compare(password, hashedPassword);
   };
 
-  public static isTokenExpired = (token: string | undefined): boolean => {
-    if (!token) {
-      return true;
+  public static generateTokens = async (
+    registeredUser: UserType
+  ): Promise<{ sessionToken: string }> => {
+    const sessionSecret = appEnvConfigs.SESSION_TOKEN_KEY;
+
+    if (!sessionSecret) {
+      throw new ApiError(409, "Session keys are not properly configured");
     }
 
-    const decodedToken = jwt.decode(token) as { exp?: number };
+    await db.session.deleteMany({
+      where: {
+        userId: registeredUser.id,
+      },
+    });
 
-    if (!decodedToken || typeof decodedToken.exp !== "number") {
-      return true;
+    const rawSessionToken = crypto.randomBytes(32).toString("hex");
+    console.log("🚀 ~ AuthServices ~ rawSessionToken:", rawSessionToken)
+
+    await db.session.create({
+      data: {
+        sessionKey: rawSessionToken,
+        userId: registeredUser.id,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
+      },
+    });
+
+    return {
+      sessionToken: rawSessionToken,
+    };
+  };
+
+  public static findSessionByToken = async (
+    rawSessionToken: string
+  ): Promise<SessionUser | null> => {
+    if (!rawSessionToken) return null;
+
+    const session = await db.session.findUnique({
+      where: {
+        sessionKey: rawSessionToken,
+      },
+      select: {
+        expiresAt: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
+    });
+
+    if (!session || !session.user) {
+      return null;
     }
 
-    const currentTime = Date.now() / 1000;
+    const now = new Date();
+    if (now > session.expiresAt) {
+      return null;
+    }
 
-    return decodedToken.exp < currentTime;
+    return {
+      id: session.user.id,
+      role: session.user.role,
+    };
   };
 }
 
