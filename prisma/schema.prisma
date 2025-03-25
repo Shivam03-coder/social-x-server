@@ -21,6 +21,7 @@ model User {
   comments      Comment[]
   session       Session?
   Event         Event[]
+  inviteStatus  InviteStatus   @default(PENDING)
 
   @@map("Users")
 }
@@ -89,7 +90,6 @@ model Member {
   role             MemberRole @default(MEMBER)
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
-  isInviteAccepted Boolean    @default(false)
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -163,7 +163,7 @@ enum PostScheduleRole {
   MEMBER
 }
 
-enum MembershipStatus {
+enum InviteStatus {
   PENDING
   ACCEPTED
 }

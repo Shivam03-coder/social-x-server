@@ -12,10 +12,10 @@ export const requireAuth = (): RequestHandler => {
         throw new ApiError(401, "Unauthorized - Token not provided");
       }
 
-      const session = await AuthServices.findSessionByToken(sessionToken);
+      const session = await AuthServices.findSessionByToken(sessionToken, res);
 
       if (!session) {
-        throw new ApiError(401, "Unauthorized - Session not found or expired");
+        throw new ApiError(401, "Session not found");
       }
 
       const user: User = {

@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import { UserType } from "@src/types/types";
 import { ApiError } from "@src/utils/server-functions";
 import crypto from "crypto";
+import { Response } from "express";
+import { GlobalUtils } from "@src/global";
 
 export interface SessionUser {
   id: string;
@@ -45,7 +47,7 @@ class AuthServices {
     });
 
     const rawSessionToken = crypto.randomBytes(32).toString("hex");
-    console.log("🚀 ~ AuthServices ~ rawSessionToken:", rawSessionToken)
+    console.log("🚀 ~ AuthServices ~ rawSessionToken:", rawSessionToken);
 
     await db.session.create({
       data: {
@@ -61,14 +63,16 @@ class AuthServices {
   };
 
   public static findSessionByToken = async (
-    rawSessionToken: string
+    rawSessionToken: string,
+    res: Response
   ): Promise<SessionUser | null> => {
-    if (!rawSessionToken) return null;
+    if (!rawSessionToken) {
+      res.clearCookie("sessionToken");
+      return null;
+    }
 
     const session = await db.session.findUnique({
-      where: {
-        sessionKey: rawSessionToken,
-      },
+      where: { sessionKey: rawSessionToken },
       select: {
         expiresAt: true,
         user: {
@@ -81,15 +85,14 @@ class AuthServices {
       },
     });
 
-    if (!session || !session.user) {
-      return null;
-    }
-
     const now = new Date();
-    if (now > session.expiresAt) {
+    const isSessionInvalid = !session || !session.user || now > session.expiresAt;
+    
+    if (isSessionInvalid) {
+      GlobalUtils.clearMultipleCookies(res, ["sessionToken", "UserRole", "UserId"]);
       return null;
     }
-
+    
     return {
       id: session.user.id,
       role: session.user.role,

@@ -59,4 +59,7 @@ export class GlobalUtils {
       );
     }
   };
+  public static clearMultipleCookies = (res:Response, cookieNames:string[]) => {
+    cookieNames.forEach((name) => res.clearCookie(name));
+  };
 }
