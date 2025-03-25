@@ -7,6 +7,8 @@ const eventRouter = Router();
 
 eventRouter.get("/client", requireAuth(), EventController.GetAllClientsWithEvents);
 eventRouter.post("/create/:clientId", requireAuth(), EventController.CreateEvent);
+eventRouter.delete("/client/event/:eventId", requireAuth(), EventController.DeleteEvent);
+
 
 // /**
 //  * 📌 Get Event by ID

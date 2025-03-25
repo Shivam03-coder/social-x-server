@@ -56,6 +56,77 @@ export class EventController {
     }
   );
 
+  public static DeleteEvent = AsyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { eventId } = req.params;
+
+      await Promise.all([
+        await db.user.CheckUserId(req),
+        await db.event.CheckEventById(eventId),
+      ]);
+
+      await db.event.delete({
+        where: { id: eventId },
+      });
+
+      res.status(200).json(new ApiResponse(200, "Event deleted successfully"));
+    }
+  );
+
+  // public static GetEventsbytext = AsyncHandler(
+  //   async (req: Request, res: Response): Promise<void> => {
+  //     const user = await db.user.CheckUserId(req);
+  //     const role = (req.query.role as "MEMBER") || "CLIENT";
+  //     const text = req.query.text as string;
+
+  //     if (!text || text.trim() === "") {
+  //       throw new ApiError(400, "Search text is required");
+  //     }
+
+  //     const events = await db.event.findMany({
+  //       where: {
+  //         OR: [
+  //           {
+  //             title: {
+  //               contains: text,
+  //               mode: "insensitive",
+  //             },
+  //           },
+  //           {
+  //             description: {
+  //               contains: text,
+  //               mode: "insensitive",
+  //             },
+  //           },
+  //         ],
+  //       },
+  //       select: {
+  //         id: true,
+  //         title: true,
+  //         startTime: true,
+  //         endTime: true,
+  //         post: {
+  //           select: {
+  //             isPublished: true,
+  //             id: true,
+  //           },
+  //         },
+  //         _count: {
+  //           select: {
+  //             participants: true,
+  //           },
+  //         },
+  //         description: true,
+  //       },
+  //       orderBy: {
+  //         startTime: "asc",
+  //       },
+  //     });
+
+  //     res.json(new ApiResponse(200, "Events found", events));
+  //   }
+  // );
+
   // public static GetEvents = AsyncHandler(
   //   async (req: Request, res: Response): Promise<void> => {
   //     const { orgId } = req.params;
@@ -110,22 +181,6 @@ export class EventController {
   //     });
 
   //     res.status(200).json(new ApiResponse(200, "Events fetched", events));
-  //   }
-  // );
-
-  // public static DeleteEvents = AsyncHandler(
-  //   async (req: Request, res: Response): Promise<void> => {
-  //     const { orgId, eventId } = req.params;
-  //     const user = await db.user.CheckUserId(req);
-  //     const event = await db.event.CheckEventById(eventId);
-  //     if (event.organizationId !== orgId || event.teamAdminId !== user.id) {
-  //       throw new ApiError(403, "Unauthorized to delete event");
-  //     }
-  //     await db.event.delete({
-  //       where: { id: eventId },
-  //     });
-
-  //     res.status(200).json(new ApiResponse(200, "Event deleted successfully"));
   //   }
   // );
 
