@@ -58,6 +58,9 @@ export class ParticipantController {
           inviteStatus: true,
           role: true,
         },
+        orderBy: {
+          createdAt: "desc",
+        },
       });
 
       res.json(
@@ -70,17 +73,17 @@ export class ParticipantController {
     }
   );
 
-  public static DeleteParticipants = AsyncHandler(
+  public static DeleteParticipant = AsyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const admin = await db.user.CheckUserId(req);
-      const { userId } = req.params;
+      const { participantId } = req.params;
 
-      if (!userId) {
+      if (!participantId) {
         throw new ApiError(400, "Missing required parameters");
       }
 
       const user = await db.user.findUnique({
-        where: { id: userId },
+        where: { id: participantId },
         select: {
           id: true,
           email: true,
@@ -94,7 +97,7 @@ export class ParticipantController {
           user.role === "CLIENT"
             ? await tx.client.delete({ where: { email: user.email } })
             : await tx.member.deleteMany({ where: { userId: user.id } });
-        await tx.user.delete({ where: { id: userId } });
+        await tx.user.delete({ where: { id: participantId } });
       });
       res.json(new ApiResponse(200, "Participant deleted successfully"));
     }

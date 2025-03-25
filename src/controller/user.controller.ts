@@ -48,7 +48,6 @@ export class UserController {
         select: {
           message: true,
           createdAt: true,
-          notificationType: true,
         },
         orderBy: {
           createdAt: "desc",

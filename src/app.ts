@@ -8,8 +8,7 @@ import { Server } from "http";
 import { appEnvConfigs } from "./configs";
 import { ApiError } from "./utils/server-functions";
 import routes from "./routes/index.routes";
-import { passport } from "@src/configs/passport";
-
+import session from "express-session";
 interface AppOptions {
   port?: number;
 }
@@ -34,6 +33,17 @@ class App {
         credentials: true,
         methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization"],
+      })
+    );
+    this.app.use(
+      session({
+        name: `daffyduck`,
+        secret: appEnvConfigs.SESSION_TOKEN_KEY as string,
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+          secure: false,
+        },
       })
     );
     this.app.use(helmet());

@@ -1,5 +1,5 @@
 import authRouter from "./auth.routes";
-import eventRouter from "./event.routes";
+import { eventRouter } from "./event.routes";
 import participantRouter from "./participant.routes";
 
 export default [
